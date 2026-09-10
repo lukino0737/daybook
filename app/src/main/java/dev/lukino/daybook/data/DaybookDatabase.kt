@@ -19,10 +19,16 @@ interface EntryDao {
     @Query("DELETE FROM entries") suspend fun clear()
 }
 
-@Database(entities = [Entry::class], version = 2, exportSchema = true)
+@Database(entities = [Entry::class], version = 3, exportSchema = true)
+@TypeConverters(EntryConverters::class)
 abstract class DaybookDatabase : RoomDatabase() {
     abstract fun entries(): EntryDao
     companion object {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE entries ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE entries ADD COLUMN reminderAt TEXT DEFAULT NULL")
@@ -30,4 +36,9 @@ abstract class DaybookDatabase : RoomDatabase() {
             }
         }
     }
+}
+
+class EntryConverters {
+    @TypeConverter fun encodeTags(tags: List<String>): String = kotlinx.serialization.json.Json.encodeToString(tags)
+    @TypeConverter fun decodeTags(raw: String): List<String> = kotlinx.serialization.json.Json.decodeFromString(raw)
 }

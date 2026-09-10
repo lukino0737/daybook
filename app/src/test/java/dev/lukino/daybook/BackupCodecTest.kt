@@ -22,17 +22,23 @@ class BackupCodecTest {
         val original = sample.first()
         val legacy = """{"formatVersion":1,"exportedAt":0,"entries":[{"id":"${original.id}","kind":"EVENT","title":"发布会","note":"","date":"2026-09-10","time":"01:00","completed":false,"createdAt":0,"updatedAt":0}]}"""
         assertEquals(original.copy(createdAt = 0, updatedAt = 0), BackupCodec.decode(legacy).entries.single())
-        val reminded = original.copy(reminderAt = "2026-09-10T00:30", reminderDeliveredFor = "2026-09-10T00:30")
+        val reminded = original.copy(tags = listOf("生活", "学习"), reminderAt = "2026-09-10T00:30", reminderDeliveredFor = "2026-09-10T00:30")
         assertEquals(reminded, BackupCodec.decode(BackupCodec.encode(listOf(reminded))).entries.single())
         val broken = BackupCodec.encode(listOf(reminded)).replace("\"reminderAt\":", "\"missingReminder\":")
         assertThrows(Exception::class.java) { BackupCodec.decode(broken) }
+    }
+    @Test fun readsV2WithEmptyTagsAndRejectsV3MissingTags() {
+        val current = BackupCodec.encode(listOf(sample.first()))
+        val v2 = current.replace("\"formatVersion\": 3", "\"formatVersion\": 2").replace("    \"tags\": [],\n", "")
+        assertTrue(BackupCodec.decode(v2).entries.single().tags.isEmpty())
+        assertThrows(Exception::class.java) { BackupCodec.decode(current.replace("\"tags\":", "\"missingTags\":")) }
     }
     @Test fun emptyBackupIsValidAndCanBePreviewedAsZero() {
         assertTrue(BackupCodec.decode(BackupCodec.encode(emptyList())).entries.isEmpty())
     }
     @Test fun rejectsMalformedUnknownAndTruncatedBackups() {
         val valid = BackupCodec.encode(sample)
-        listOf("not JSON", valid.take(valid.length / 2), valid.replace("\"formatVersion\": 2", "\"formatVersion\": 9"),
+        listOf("not JSON", valid.take(valid.length / 2), valid.replace("\"formatVersion\": 3", "\"formatVersion\": 9"),
             valid.replace("\"EVENT\"", "\"UNKNOWN\""), valid.replace("2026-09-10", "2026-02-30"),
             valid.replace("\"id\":", "\"missingId\":"), valid.replace("\"01:00\"", "\"25:00\""))
             .forEach { assertThrows(Exception::class.java) { BackupCodec.decode(it) } }

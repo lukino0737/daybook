@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter
     draft: Draft, busy: Boolean, error: String?,
     onChange: (Draft) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit,
     onDelete: (() -> Unit)?,
+    knownTags: List<String> = emptyList(),
 ) {
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
@@ -70,9 +71,10 @@ import java.time.format.DateTimeFormatter
                         if (draft.time != null) TextButton(enabled = !busy, onClick = { onChange(draft.copy(time = null)) }) { Text("清除时间") }
                     }
                     if (draft.kind == EntryKind.TASK) Text("只设日期时，当天结束后才算逾期。这里记录的是截止时间。", style = MaterialTheme.typography.bodySmall)
+                    TagEditor(draft, busy, knownTags, onChange)
                     if (draft.kind != EntryKind.NOTE) ReminderEditor(draft, busy, onChange)
                     OutlinedTextField(value = draft.note, onValueChange = { if (it.length <= 20_000) onChange(draft.copy(note = it)) },
-                        label = { Text("备注 · 链接、地点、细节") }, modifier = Modifier.fillMaxWidth().testTag("note"), enabled = !busy, minLines = 4)
+                        label = { Text(if (draft.kind == EntryKind.NOTE) "今天发生了什么" else "备注 · 链接、地点、细节") }, modifier = Modifier.fillMaxWidth().testTag("note"), enabled = !busy, minLines = 4)
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (onDelete != null) TextButton(onClick = { confirmDelete = true }, enabled = !busy) { Text("删除记录", color = MaterialTheme.colorScheme.error) }
                     Spacer(Modifier.height(24.dp))

@@ -43,6 +43,14 @@ class ReminderTest {
             app.repository.delete(entry.id)
             app.reminders.reconcile()
             assertFalse(manager.activeNotifications.any { it.tag == entry.id })
+            // A transactionally restored database must also cancel notifications from the old data.
+            val previous = app.repository.all()
+            app.repository.save(entry)
+            app.reminders.reconcile()
+            assertTrue(manager.activeNotifications.any { it.tag == entry.id })
+            app.repository.replaceAll(previous) {}
+            app.reminders.reconcile()
+            assertFalse(manager.activeNotifications.any { it.tag == entry.id })
         } finally { app.repository.delete(entry.id); manager.cancel(entry.id, 0); allow() }
     }
     @Test fun deniedPermissionKeepsReminderPending() = runBlocking {
