@@ -22,6 +22,8 @@
 
 已知修复：通知导航曾重新处理启动 Intent，影响重建草稿与 ActivityScenario 生命周期跟踪，已按一次性导航处理并复测通过。没有通过删除用户数据规避迁移问题。
 
+发布代码 9bb2341 的 [GitHub CI 34478904514](https://github.com/lukino0737/daybook/actions/runs/34478904514) 通过；保留 Actions 版本弃用提示，未影响构建、单测或 Lint。
+
 APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`。
 
 ---
