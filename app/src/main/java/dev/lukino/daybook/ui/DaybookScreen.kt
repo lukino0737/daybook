@@ -98,10 +98,11 @@ import androidx.compose.material.icons.outlined.MoreVert
             if (busy && draft == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = view == "day", onClick = { vm.setView("day") }, label = { Text("日历") })
-                FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("未安排 ${entries.count { it.kind == EntryKind.TASK && it.date == null && !it.completed }}") })
+                FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("无截止 ${entries.count { it.kind == EntryKind.TASK && it.date == null }}") })
                 FilterChip(selected = view == "review", onClick = { vm.setView("review") }, label = { Text("回顾") })
-                FilterChip(selected = view == "tasks", onClick = { vm.setView("tasks") }, label = { Text("待完成") })
+                FilterChip(selected = view == "tasks", onClick = { vm.setView("tasks") }, label = { Text("待完成 ${entries.count { it.kind == EntryKind.TASK && !it.completed }}") })
             } }
+            if (view == "undated" && visible.isNotEmpty()) item { Text("未设截止日期的任务，包括已完成项。", style = MaterialTheme.typography.bodySmall) }
             if (view == "review") item {
                 ReviewFilters(query, tag, reviewAll, knownTags, vm::setQuery, vm::setTag, vm::setReviewAll)
             }
@@ -118,12 +119,17 @@ import androidx.compose.material.icons.outlined.MoreVert
                     items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
                 }
             }
-            item { Text(when (view) { "undated" -> "未安排"; "tasks" -> "待完成任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge) }
+            item { Text(when (view) { "undated" -> "未设截止日期的任务"; "tasks" -> "待完成任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge) }
             if (visible.isEmpty()) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.EditCalendar, null, tint = Green)
                     Text(if (view == "day") "这一天，留给你慢慢写。" else if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
-                    Text("安排、截止任务和生活片段，都可以记在这里。", style = MaterialTheme.typography.bodyMedium)
+                    Text(when (view) {
+                        "undated" -> "这里仅显示未设截止日期的任务。日历中的安排请到“日历”查看。"
+                        "tasks" -> "这里显示所有未完成任务，包括已设和未设截止日期的任务。"
+                        "review" -> "试试清除搜索或标签，或切换到全部类型。"
+                        else -> "安排、截止任务和生活片段，都可以记在这里。"
+                    }, style = MaterialTheme.typography.bodyMedium)
                 } }
             }
             items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day", onTag = vm::openTag) }

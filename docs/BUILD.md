@@ -44,3 +44,13 @@ keyPassword=YOUR_LOCAL_PASSWORD
 ## 测试数据
 
 自动测试只使用虚构样例和隔离数据库；真实日历记录、导出的 JSON 和本地签名不得进入 Git。
+
+## 第二阶段专项验收
+
+常规仪器用例在专用 API 35 模拟器运行；提醒用例通过测试工具设置通知与准时提醒权限。
+
+- 拒绝通知：先在系统撤销通知权限，再以 `daybookDenied=true` 运行 `ReminderTest#deniedPermissionKeepsReminderPending`。
+- 进程退出/重启：以 `daybookLifecycle=seed` 运行 `ReminderLifecycleTest`，退出后台进程或重启；先从系统通知确认送达（此时不要重新打开 App），再以 `daybookLifecycle=verify` 检查持久化状态并清理样例。
+- 跨版本：先安装真实旧 APK 与对应旧测试 APK 运行 seed；直接覆盖新版 APK，替换测试 APK 后运行新版 verify。不能仅用当前 debug 与当前 release 冒充历史升级验证。
+
+Room 历史 schema 位于 app/schemas；新增结构需提供迁移及历史 schema 测试，禁止破坏性重建。旧 JSON 导入保留稳定 ID，导出统一采用格式 3。

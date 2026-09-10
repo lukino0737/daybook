@@ -2,28 +2,31 @@
 
 一款离线安卓个人日历。像纸质日历一样，统一记录安排、截止任务和生活片段。
 
-## 第一阶段
+## 当前功能
 
 - Kotlin / Jetpack Compose / Room，Android 8.0 及以上。
 - 月历与当天列表、三类记录、未安排任务、近期与逾期截止提示。
 - 不联网，不要求账号；通过系统文件选择器导出和恢复 JSON 备份。
-- 不包含系统通知、自动同步、AI 录入和重复日程。
+- 安排/任务可设置独立通知提醒；生活记录支持多标签、回顾与标题/正文搜索。
+- 手机竖屏界面；暂不包含自动同步、AI 录入、重复日程和照片。
 
 ## 安装与上手
 
-[下载 v0.1.0 试用版](https://github.com/lukino0737/daybook/releases/tag/v0.1.0) · [使用说明](docs/USAGE.md) · [构建方法](docs/BUILD.md)
+[下载 v0.2.0 试用版](https://github.com/lukino0737/daybook/releases/tag/v0.2.0) · [使用说明](docs/USAGE.md) · [构建方法](docs/BUILD.md)
 
-将 APK 下载到 Android 8.0+ 手机安装。首次打开没有预填数据。点日期再点“记一笔”；右上角菜单可以导出或恢复备份。
+将 APK 下载到 Android 8.0+ 手机安装。旧版用户先导出备份，再直接覆盖安装，勿先卸载。首次打开没有预填数据。点日期再点“记一笔”；右上角菜单可以导出或恢复备份。
 
 <img src="docs/screenshots/calendar.png" alt="Daybook 月历，展示虚构测试数据" width="320" />
+
+<img src="docs/screenshots/review.png" alt="Daybook 按标签回顾，展示虚构测试数据" width="320" />
 
 截图中的内容是测试样例，不随安装包提供。
 
 ## 验证与维护
 
-15 项单元测试、8 项 Android 15 模拟器测试通过；另完成系统大字体/软键盘检查、同签名覆盖安装的数据保留测试，以及 release 启动和签名验证。品牌真机与两周实际使用仍待验证，第一版以个人试用为目标。
+第二阶段的自动测试、模拟器检查和升级验证分别记录在 [验收报告](docs/TESTING.md)。提醒需要通知和准时提醒权限；各品牌手机的后台表现仍需真机试用。
 
-每个里程碑都有独立提交。开发进度见 [开发日志](docs/DEVELOPMENT.md)，详细证据与限制见 [验收报告](docs/TESTING.md)，范围见 [第一阶段计划](docs/PLAN.md)。
+每个里程碑都有独立提交。开发进度见 [开发日志](docs/DEVELOPMENT.md)，详细证据与限制见 [验收报告](docs/TESTING.md)，范围见 [第一阶段计划](docs/PLAN.md) 和 [第二阶段计划](docs/PHASE2.md)。
 
 这是一个持续维护的 AI 辅助开发项目，可以从 [代码阅读与练习路线](docs/LEARNING.md) 开始。
 

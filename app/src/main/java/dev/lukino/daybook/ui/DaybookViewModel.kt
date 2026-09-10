@@ -77,7 +77,12 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         if (busy.value) return
         failure.value = null
         setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.tags.joinToString("，"), it.reminderAt, it.reminderDeliveredFor) }
-            ?: Draft(date = selected.value, kind = if (view.value == "review") EntryKind.NOTE else EntryKind.EVENT))
+            ?: when (view.value) {
+                "review" -> Draft(date = selected.value, kind = EntryKind.NOTE)
+                "undated" -> Draft(kind = EntryKind.TASK)
+                "tasks" -> Draft(date = selected.value, kind = EntryKind.TASK)
+                else -> Draft(date = selected.value)
+            })
     }
     fun openEntry(id: String) {
         viewModelScope.launch {
