@@ -1,5 +1,6 @@
 package dev.lukino.daybook.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -26,6 +27,8 @@ data class Entry(
     val completed: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
+    @ColumnInfo(defaultValue = "NULL") val reminderAt: String? = null,
+    @ColumnInfo(defaultValue = "NULL") val reminderDeliveredFor: String? = null,
 ) {
     fun validate() {
         require(UUID.fromString(id).toString() == id) { "记录 ID 无效" }
@@ -36,6 +39,9 @@ data class Entry(
         require(kind == EntryKind.TASK || !completed) { "只有任务可以标记完成" }
         date?.let { require(LocalDate.parse(it).toString() == it) { "日期格式无效" } }
         time?.let { require(it.matches(Regex("\\d{2}:\\d{2}"))); LocalTime.parse(it) }
+        require(reminderAt == null || kind != EntryKind.NOTE) { "生活记录不设置提醒" }
+        reminderAt?.let { require(LocalDateTime.parse(it).toString() == it && LocalDateTime.parse(it).second == 0 && LocalDateTime.parse(it).nano == 0) { "提醒时间需精确到分钟" } }
+        require(reminderDeliveredFor == null || reminderDeliveredFor == reminderAt) { "提醒状态无效" }
         require(createdAt >= 0 && updatedAt >= createdAt) { "记录时间无效" }
     }
 }

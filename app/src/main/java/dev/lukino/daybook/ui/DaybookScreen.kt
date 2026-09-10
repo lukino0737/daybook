@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     val pending by vm.pendingRestore.collectAsStateWithLifecycle()
     val restoringSnapshot by vm.restoringSnapshot.collectAsStateWithLifecycle()
     val historyVersion by vm.historyVersion.collectAsStateWithLifecycle()
+    var reminderSettings by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::previewImport) }
@@ -76,6 +77,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                 Box {
                     IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "备份与恢复") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("提醒设置") }, onClick = { menu = false; reminderSettings = true })
                         DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.json") })
                         DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
                         DropdownMenuItem(text = { Text("恢复替换前快照") }, onClick = { menu = false; vm.previewSnapshot() })
@@ -92,6 +94,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                 FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("未安排 ${entries.count { it.kind == EntryKind.TASK && it.date == null && !it.completed }}") })
                 FilterChip(selected = view == "tasks", onClick = { vm.setView("tasks") }, label = { Text("待完成") })
             } }
+            if (entries.any { it.reminderAt != null && !it.completed }) item { ReminderStatus { reminderSettings = true } }
             if (view == "day") {
                 item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
                     { vm.setMonth(it.toString()) }, vm::select) }
@@ -115,6 +118,9 @@ import androidx.compose.material.icons.outlined.MoreVert
             items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day") }
         }
     }
+    if (reminderSettings) AlertDialog(onDismissRequest = { reminderSettings = false },
+        title = { Text("提醒设置") }, text = { ReminderPermissions() },
+        confirmButton = { TextButton(onClick = { reminderSettings = false }) { Text("完成") } })
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
         entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }) }
     pending?.let { archive ->
@@ -147,6 +153,8 @@ import androidx.compose.material.icons.outlined.MoreVert
                     if (overdue) append(" · 已逾期")
                     if (entry.completed) append(" · 已完成")
                 }, style = MaterialTheme.typography.labelMedium, color = if (overdue) Clay else MaterialTheme.colorScheme.onSurfaceVariant)
+                entry.reminderAt?.let { Text("提醒 · ${it.replace('T', ' ')}" + if (entry.reminderDeliveredFor == it) " · 已发出" else "",
+                    style = MaterialTheme.typography.bodySmall) }
                 if (entry.note.isNotBlank()) Text(entry.note, maxLines = 3, style = MaterialTheme.typography.bodySmall)
             }
         }

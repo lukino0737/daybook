@@ -70,6 +70,7 @@ import java.time.format.DateTimeFormatter
                         if (draft.time != null) TextButton(enabled = !busy, onClick = { onChange(draft.copy(time = null)) }) { Text("清除时间") }
                     }
                     if (draft.kind == EntryKind.TASK) Text("只设日期时，当天结束后才算逾期。这里记录的是截止时间。", style = MaterialTheme.typography.bodySmall)
+                    if (draft.kind != EntryKind.NOTE) ReminderEditor(draft, busy, onChange)
                     OutlinedTextField(value = draft.note, onValueChange = { if (it.length <= 20_000) onChange(draft.copy(note = it)) },
                         label = { Text("备注 · 链接、地点、细节") }, modifier = Modifier.fillMaxWidth().testTag("note"), enabled = !busy, minLines = 4)
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

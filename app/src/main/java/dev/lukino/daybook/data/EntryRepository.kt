@@ -10,6 +10,14 @@ class EntryRepository(private val database: DaybookDatabase) {
     private val dao get() = database.entries()
     val entries = dao.observeAll()
 
+    // Scheduling and delivery share the write lock: stale notifications cannot race with edits/restores.
+    suspend fun reconcileReminders(deliver: (Entry) -> Boolean, schedule: (List<Entry>) -> Unit) = writes.withLock {
+        dao.all().forEach { entry ->
+            if (deliver(entry)) dao.save(entry.copy(reminderDeliveredFor = entry.reminderAt))
+        }
+        schedule(dao.all())
+    }
+
     suspend fun all(): List<Entry> = dao.all()
     suspend fun save(entry: Entry) = writes.withLock { entry.validate(); dao.save(entry) }
     suspend fun delete(id: String) = writes.withLock { dao.delete(id) }

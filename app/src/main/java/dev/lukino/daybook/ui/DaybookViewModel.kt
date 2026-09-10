@@ -25,10 +25,14 @@ data class Draft(
     val time: String? = null,
     val completed: Boolean = false,
     val createdAt: Long? = null,
+    val reminderAt: String? = null,
+    val reminderDeliveredFor: String? = null,
 ) {
     fun entry(): Entry {
         val now = System.currentTimeMillis()
         val fresh = Entry(kind = kind, title = title.trim(), note = note, date = date, time = time,
+            reminderAt = if (kind == EntryKind.NOTE) null else reminderAt,
+            reminderDeliveredFor = reminderDeliveredFor.takeIf { kind != EntryKind.NOTE && it == reminderAt },
             completed = kind == EntryKind.TASK && completed, createdAt = createdAt ?: now, updatedAt = maxOf(now, createdAt ?: now))
         return if (id == null) fresh else fresh.copy(id = id)
     }
@@ -64,8 +68,16 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun edit(entry: Entry? = null) {
         if (busy.value) return
         failure.value = null
-        setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt) }
+        setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.reminderAt, it.reminderDeliveredFor) }
             ?: Draft(date = selected.value))
+    }
+    fun openEntry(id: String) {
+        viewModelScope.launch {
+            try {
+                val entry = repository.all().firstOrNull { it.id == id }
+                if (entry != null) edit(entry) else channel.send(UiNotice.Message("这条记录已删除"))
+            } catch (_: Exception) { failure.value = "暂时无法打开记录，请重试" }
+        }
     }
     fun setDraft(value: Draft) { saved["draft"] = Json.encodeToString(value) }
     fun dismissDraft() { if (!busy.value) { saved["draft"] = null; failure.value = null } }

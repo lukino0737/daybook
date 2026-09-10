@@ -1,6 +1,8 @@
 package dev.lukino.daybook.data
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,7 +19,15 @@ interface EntryDao {
     @Query("DELETE FROM entries") suspend fun clear()
 }
 
-@Database(entities = [Entry::class], version = 1, exportSchema = true)
+@Database(entities = [Entry::class], version = 2, exportSchema = true)
 abstract class DaybookDatabase : RoomDatabase() {
     abstract fun entries(): EntryDao
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE entries ADD COLUMN reminderAt TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE entries ADD COLUMN reminderDeliveredFor TEXT DEFAULT NULL")
+            }
+        }
+    }
 }
