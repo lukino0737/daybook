@@ -9,7 +9,23 @@
 - 不联网，不要求账号；通过系统文件选择器导出和恢复 JSON 备份。
 - 不包含系统通知、自动同步、AI 录入和重复日程。
 
-开发进度和验证证据见 [开发日志](docs/DEVELOPMENT.md)，完整范围见 [第一阶段计划](docs/PLAN.md)。当前版本在开发中，不代表已经完成验收。
+## 安装与上手
+
+[下载 v0.1.0 试用版](https://github.com/lukino0737/daybook/releases/tag/v0.1.0) · [使用说明](docs/USAGE.md) · [构建方法](docs/BUILD.md)
+
+将 APK 下载到 Android 8.0+ 手机安装。首次打开没有预填数据。点日期再点“记一笔”；右上角菜单可以导出或恢复备份。
+
+<img src="docs/screenshots/calendar.png" alt="Daybook 月历，展示虚构测试数据" width="320" />
+
+截图中的内容是测试样例，不随安装包提供。
+
+## 验证与维护
+
+15 项单元测试、8 项 Android 15 模拟器测试通过；另完成系统大字体/软键盘检查、同签名覆盖安装的数据保留测试，以及 release 启动和签名验证。品牌真机与两周实际使用仍待验证，第一版以个人试用为目标。
+
+每个里程碑都有独立提交。开发进度见 [开发日志](docs/DEVELOPMENT.md)，详细证据与限制见 [验收报告](docs/TESTING.md)，范围见 [第一阶段计划](docs/PLAN.md)。
+
+这是一个持续维护的 AI 辅助开发项目，可以从 [代码阅读与练习路线](docs/LEARNING.md) 开始。
 
 ## 数据
 

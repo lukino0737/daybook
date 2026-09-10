@@ -1,9 +1,16 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
+}
+
+val localSigning = rootProject.file("keystore.properties")
+val signingValues = Properties().apply {
+    if (localSigning.exists()) localSigning.inputStream().use { load(it) }
 }
 
 android {
@@ -25,6 +32,20 @@ android {
     kotlinOptions { jvmTarget = "17" }
     testOptions { unitTests.isReturnDefaultValues = true }
     sourceSets["androidTest"].assets.srcDir("schemas")
+    signingConfigs {
+        if (localSigning.exists()) create("personalRelease") {
+            storeFile = rootProject.file(signingValues.getProperty("storeFile"))
+            storePassword = signingValues.getProperty("storePassword")
+            keyAlias = signingValues.getProperty("keyAlias")
+            keyPassword = signingValues.getProperty("keyPassword")
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (localSigning.exists()) signingConfig = signingConfigs.getByName("personalRelease")
+        }
+    }
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 

@@ -24,6 +24,23 @@
 
 覆盖安装必须保持同一 applicationId 和签名。不要卸载旧应用再升级，否则本地数据会被清除。签名材料由维护者本地保存，不提交仓库。
 
+## 个人试用版签名
+
+维护者保存 `.local/signing/daybook-release.jks` 和根目录 `keystore.properties`，两者均被忽略。请将这两份材料另行保存在自己的安全备份中，丢失签名会影响以后直接覆盖升级。
+
+`keystore.properties` 格式（示例值需替换）：
+
+```properties
+storeFile=.local/signing/daybook-release.jks
+storePassword=YOUR_LOCAL_PASSWORD
+keyAlias=daybook
+keyPassword=YOUR_LOCAL_PASSWORD
+```
+
+配置后执行 `./gradlew :app:assembleRelease`，产物为 `app/build/outputs/apk/release/app-release.apk`。没有签名配置时只能生成未签名 release 包，不可当作安装包分发。不要使用不同机器临时生成的 debug 签名发布更新。
+
+覆盖安装专项测试位于 `UpgradeContinuityTest`，常规测试会跳过此项。需先运行 `daybookUpgrade=seed`，安装同签名新版 APK，再运行 `daybookUpgrade=verify`；测试 APK 也必须使用相同签名。仅在专用模拟器执行。
+
 ## 测试数据
 
 自动测试只使用虚构样例和隔离数据库；真实日历记录、导出的 JSON 和本地签名不得进入 Git。
