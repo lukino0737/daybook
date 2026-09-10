@@ -9,10 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import dev.lukino.daybook.data.EntryKind
 import java.time.LocalDate
 import java.time.LocalTime
@@ -27,7 +30,13 @@ import java.time.format.DateTimeFormatter
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Surface(Modifier.fillMaxSize()) {
+        val view = LocalView.current
+        SideEffect {
+            (view.parent as? DialogWindowProvider)?.window?.let {
+                WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = true
+            }
+        }
+        Surface(Modifier.fillMaxSize().testTag("editor-root")) {
             Column(Modifier.safeDrawingPadding().imePadding().padding(horizontal = 20.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("取消") }

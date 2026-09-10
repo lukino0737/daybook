@@ -12,7 +12,10 @@ import dev.lukino.daybook.ui.*
 
 class MainActivity : ComponentActivity() {
     private val model: DaybookViewModel by viewModels {
-        viewModelFactory { initializer { DaybookViewModel((application as DaybookApplication).repository, createSavedStateHandle()) } }
+        viewModelFactory { initializer {
+            val app = application as DaybookApplication
+            DaybookViewModel(app.repository, createSavedStateHandle(), app.backup)
+        } }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

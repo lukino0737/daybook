@@ -11,6 +11,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.LocalDateTime
+import android.net.Uri
+import dev.lukino.daybook.backup.BackupArchive
+import dev.lukino.daybook.backup.BackupService
 
 @Serializable
 data class Draft(
@@ -33,10 +36,10 @@ data class Draft(
 
 sealed interface UiNotice {
     data class Message(val text: String) : UiNotice
-    data class Deleted(val entry: Entry) : UiNotice
+    data class Deleted(val entry: Entry, val historyVersion: Int) : UiNotice
 }
 
-class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle) : ViewModel() {
+class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle, private val backup: BackupService) : ViewModel() {
     val entries = repository.entries.catch { failure.value = "读取失败，请重新打开应用：${it.localizedMessage}" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val selected = saved.getStateFlow("selected", LocalDate.now().toString())
@@ -48,6 +51,8 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     val busy = MutableStateFlow(false)
     val failure = MutableStateFlow<String?>(null)
     val now = MutableStateFlow(LocalDateTime.now())
+    val pendingRestore = MutableStateFlow<BackupArchive?>(null)
+    val restoringSnapshot = MutableStateFlow(false)
     private val channel = Channel<UiNotice>(Channel.BUFFERED)
     val notices = channel.receiveAsFlow()
 
@@ -57,6 +62,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun setView(value: String) { saved["view"] = value }
     fun today() { refreshNow(); select(now.value.toLocalDate()); setMonth(now.value.toLocalDate().toString().take(7)) }
     fun edit(entry: Entry? = null) {
+        if (busy.value) return
         failure.value = null
         setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt) }
             ?: Draft(date = selected.value))
@@ -79,9 +85,35 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun delete(entry: Entry) = runWrite {
         repository.delete(entry.id)
         saved["draft"] = null
-        channel.send(UiNotice.Deleted(entry))
+        channel.send(UiNotice.Deleted(entry, historyVersion.value))
     }
-    fun undoDelete(entry: Entry) = runWrite { repository.save(entry); channel.send(UiNotice.Message("已恢复")) }
+    fun undoDelete(entry: Entry, expectedVersion: Int) = runWrite {
+        if (expectedVersion != historyVersion.value) return@runWrite
+        repository.save(entry)
+        channel.send(UiNotice.Message("已恢复"))
+    }
+
+    fun export(uri: Uri) = runWrite { backup.export(uri); channel.send(UiNotice.Message("备份已导出")) }
+    fun previewImport(uri: Uri) = runWrite {
+        val archive = backup.preview(uri)
+        restoringSnapshot.value = false
+        pendingRestore.value = archive
+    }
+    fun previewSnapshot() = runWrite {
+        val archive = backup.previewSnapshot()
+        restoringSnapshot.value = true
+        pendingRestore.value = archive
+    }
+    fun dismissRestore() { if (!busy.value) pendingRestore.value = null }
+    fun confirmRestore() = runWrite {
+        val archive = pendingRestore.value ?: return@runWrite
+        backup.restore(archive)
+        pendingRestore.value = null
+        // Old undo notices must not reintroduce entries from a replaced database.
+        historyVersion.value += 1
+        channel.send(UiNotice.Message("已恢复 ${archive.entries.size} 条记录"))
+    }
+    val historyVersion = MutableStateFlow(0)
 
     private fun runWrite(block: suspend () -> Unit) {
         if (busy.value) return

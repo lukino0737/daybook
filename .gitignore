@@ -16,3 +16,4 @@ keystore.properties
 daybook-backup*.json
 *.apk
 .env
+.local/

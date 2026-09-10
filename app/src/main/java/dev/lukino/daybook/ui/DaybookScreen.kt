@@ -24,6 +24,9 @@ import kotlinx.coroutines.isActive
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.MoreVert
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable fun DaybookScreen(vm: DaybookViewModel) {
@@ -35,7 +38,14 @@ import java.time.YearMonth
     val busy by vm.busy.collectAsStateWithLifecycle()
     val error by vm.failure.collectAsStateWithLifecycle()
     val now by vm.now.collectAsStateWithLifecycle()
+    val pending by vm.pendingRestore.collectAsStateWithLifecycle()
+    val restoringSnapshot by vm.restoringSnapshot.collectAsStateWithLifecycle()
+    val historyVersion by vm.historyVersion.collectAsStateWithLifecycle()
+    var menu by remember { mutableStateOf(false) }
+    val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
+    val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::previewImport) }
     val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(historyVersion) { snackbar.currentSnackbarData?.dismiss() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -46,7 +56,11 @@ import java.time.YearMonth
         vm.notices.collect { notice ->
             when (notice) {
                 is UiNotice.Message -> snackbar.showSnackbar(notice.text)
-                is UiNotice.Deleted -> if (snackbar.showSnackbar("已删除记录", "撤销", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoDelete(notice.entry)
+                is UiNotice.Deleted -> {
+                    if (notice.historyVersion == vm.historyVersion.value &&
+                        snackbar.showSnackbar("已删除记录", "撤销", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed)
+                        vm.undoDelete(notice.entry, notice.historyVersion)
+                }
             }
         }
     }
@@ -57,11 +71,22 @@ import java.time.YearMonth
     }
     Scaffold(
         topBar = { TopAppBar(title = { Column { Text("Daybook", style = MaterialTheme.typography.headlineSmall); Text("把日子，记在一起。", style = MaterialTheme.typography.labelMedium) } },
-            actions = { TextButton(onClick = vm::today) { Text("今天") } }) },
+            actions = {
+                TextButton(onClick = vm::today) { Text("今天") }
+                Box {
+                    IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "备份与恢复") }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.json") })
+                        DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
+                        DropdownMenuItem(text = { Text("恢复替换前快照") }, onClick = { menu = false; vm.previewSnapshot() })
+                    }
+                }
+            }) },
         floatingActionButton = { ExtendedFloatingActionButton(onClick = { vm.edit() }, icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("记一笔") }, modifier = Modifier.testTag("add")) },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("calendar-list"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (busy && draft == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = view == "day", onClick = { vm.setView("day") }, label = { Text("日历") })
                 FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("未安排 ${entries.count { it.kind == EntryKind.TASK && it.date == null && !it.completed }}") })
@@ -74,7 +99,7 @@ import java.time.YearMonth
                 if (upcoming.isNotEmpty()) {
                     item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("近期截止", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Clay)
-                        TextButton(onClick = { vm.setView("tasks") }) { Text("全部 ${upcoming.size} 项") }
+                        TextButton(onClick = { vm.setView("tasks") }) { Text("全部任务") }
                     } }
                     items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = true) }
                 }
@@ -92,6 +117,15 @@ import java.time.YearMonth
     }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
         entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }) }
+    pending?.let { archive ->
+        AlertDialog(onDismissRequest = vm::dismissRestore, modifier = Modifier.testTag("restore-dialog"),
+            title = { Text(if (restoringSnapshot) "恢复替换前快照？" else "从备份恢复？") },
+            text = { Text("备份包含 ${archive.entries.size} 条记录，将完整替换当前 ${entries.size} 条记录。" +
+                (if (archive.entries.isEmpty()) "\n\n这是空备份，恢复后当前列表将被清空。" else "") +
+                "\n\n替换前会保存本地快照。备份恢复不会合并记录。") },
+            confirmButton = { TextButton(onClick = vm::confirmRestore, enabled = !busy) { Text(if (busy) "恢复中" else "确认替换") } },
+            dismissButton = { TextButton(onClick = vm::dismissRestore, enabled = !busy) { Text("取消") } })
+    }
     if (error != null && draft == null) AlertDialog(onDismissRequest = vm::clearError, title = { Text("操作未完成") },
         text = { Text(error!!) }, confirmButton = { TextButton(onClick = vm::clearError) { Text("知道了") } })
 }
