@@ -15,3 +15,11 @@
 - 工具链：JDK 21、Gradle 8.13、AGP 8.13.2、SDK 36、Build Tools 35.0.0。模拟器使用 macOS 虚拟化。
 - 限制：尚未在用户真机安装；本里程碑界面仅用于验证启动，不包含日历功能。
 - 学习入口：MainActivity → setContent；settings/build.gradle.kts → Gradle 如何组织和编译应用。
+
+## 里程碑② · 记录闭环
+
+- 已完成：安排/任务/记录统一表单、Room 数据库与 schema、当天列表、修改、完成/恢复、删除与短时撤销、SavedStateHandle 草稿。
+- 验证：APK 构建成功；7 项日期/字段规则单元测试通过；4 项模拟器测试通过（启动、数据库重开与删除恢复、写入失败回滚、界面草稿重建与编辑保留 ID）。
+- 失败验证：快照回调抛错、SQLite 触发器强制插入失败，原数据均未丢失。
+- 限制：月历视图与备份入口在后续里程碑；用户真机仍待验证。
+- 学习入口：EntryEditor → DaybookViewModel.save → EntryRepository.save → Room。注意保存成功后才关闭表单。
