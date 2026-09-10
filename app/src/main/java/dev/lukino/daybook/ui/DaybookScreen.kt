@@ -23,11 +23,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable fun DaybookScreen(vm: DaybookViewModel) {
     val entries by vm.entries.collectAsStateWithLifecycle()
     val selected by vm.selected.collectAsStateWithLifecycle()
+    val month by vm.month.collectAsStateWithLifecycle()
     val view by vm.view.collectAsStateWithLifecycle()
     val draft by vm.draft.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -65,6 +67,18 @@ import java.time.LocalDateTime
                 FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("未安排 ${entries.count { it.kind == EntryKind.TASK && it.date == null && !it.completed }}") })
                 FilterChip(selected = view == "tasks", onClick = { vm.setView("tasks") }, label = { Text("待完成") })
             } }
+            if (view == "day") {
+                item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
+                    { vm.setMonth(it.toString()) }, vm::select) }
+                val upcoming = EntryRules.upcoming(entries, now)
+                if (upcoming.isNotEmpty()) {
+                    item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("近期截止", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Clay)
+                        TextButton(onClick = { vm.setView("tasks") }) { Text("全部 ${upcoming.size} 项") }
+                    } }
+                    items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = true) }
+                }
+            }
             item { Text(when (view) { "undated" -> "未安排"; "tasks" -> "待完成任务"; else -> selected }, style = MaterialTheme.typography.titleLarge) }
             if (visible.isEmpty()) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -73,7 +87,7 @@ import java.time.LocalDateTime
                     Text("安排、截止任务和生活片段，都可以记在这里。", style = MaterialTheme.typography.bodyMedium)
                 } }
             }
-            items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }) }
+            items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day") }
         }
     }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
