@@ -34,7 +34,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) openNotification(intent)
         enableEdgeToEdge()
         setContent {
-            DaybookTheme { DaybookScreen(model) }
+            DaybookTheme {
+                DaybookScreen(model)
+                StartupReminderSetup()
+            }
         }
     }
 }

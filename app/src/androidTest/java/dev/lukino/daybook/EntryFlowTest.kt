@@ -10,7 +10,8 @@ import org.junit.Test
 import java.util.UUID
 
 class EntryFlowTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val returningUser = ReturningUserRule()
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     private val title = "测试记录-${UUID.randomUUID().toString().take(8)}"
     private val repository get() = (compose.activity.application as DaybookApplication).repository
 

@@ -14,7 +14,8 @@ import org.junit.Test
 import java.io.File
 
 class ReminderSettingsTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val returningUser = ReturningUserRule()
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     @Test fun settingsAreASeparatePageAndReturningKeepsUnsavedDraft() {
         compose.onNodeWithTag("add").performClick()
         compose.onNodeWithTag("title").performTextInput("提醒设置草稿")

@@ -12,7 +12,8 @@ import org.junit.Test
 import java.time.LocalDateTime
 
 class ReminderUiTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val returningUser = ReturningUserRule()
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     @Test fun notificationOpensMatchingEntryAndReminderDraftSurvivesRecreation() {
         val app = ApplicationProvider.getApplicationContext<DaybookApplication>()
         org.junit.Assume.assumeTrue(app.reminders.notificationsEnabled() && app.reminders.exactEnabled())

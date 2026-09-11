@@ -12,7 +12,8 @@ import java.io.File
 import java.time.LocalDate
 
 class CalendarUiTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val returningUser = ReturningUserRule()
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     private val ownEntries = mutableListOf<Entry>()
     private val repository get() = (compose.activity.application as DaybookApplication).repository
     @After fun cleanup() = runBlocking { ownEntries.forEach { repository.delete(it.id) } }
