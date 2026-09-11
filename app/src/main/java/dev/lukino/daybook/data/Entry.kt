@@ -11,7 +11,7 @@ import java.util.UUID
 
 @Serializable
 enum class EntryKind(val label: String, val symbol: String) {
-    EVENT("安排", "○"), TASK("任务", "□"), NOTE("记录", "◇")
+    EVENT("日程", "○"), TASK("任务", "□"), NOTE("记录", "◇")
 }
 
 /** Dates are ISO local calendar dates, never UTC-midnight timestamps. */
@@ -37,7 +37,7 @@ data class Entry(
         require(tags.size <= 10 && tags.distinct().size == tags.size) { "最多设置 10 个不重复的标签" }
         require(tags.all { it.isNotBlank() && it == it.trim() && it.length <= 30 && it.none { c -> c in ",，\n\r" } }) { "标签需为 1–30 字，不包含逗号或换行" }
         require(note.length <= 20_000) { "备注不能超过 20000 个字符" }
-        require(kind == EntryKind.TASK || date != null) { "安排和记录需要日期" }
+        require(kind == EntryKind.TASK || date != null) { "日程和记录需要日期" }
         require(time == null || date != null) { "请先设置日期" }
         require(kind == EntryKind.TASK || !completed) { "只有任务可以标记完成" }
         date?.let { require(LocalDate.parse(it).toString() == it) { "日期格式无效" } }

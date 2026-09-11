@@ -29,9 +29,11 @@ class CalendarUiTest {
         )
         ownEntries += samples
         runBlocking { samples.forEach { repository.save(it) } }
-        compose.waitUntil(5000) { compose.onAllNodesWithText("+1 条").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("marker-$today", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("day-$today").assertExists()
-        compose.onNodeWithTag("next-month").performClick()
+        compose.onNodeWithTag("today").assertDoesNotExist()
+        compose.onNodeWithTag("month-calendar").performTouchInput { swipeLeft() }
+        compose.onNodeWithTag("today").assertExists()
         compose.onNodeWithText("今天").performClick()
         compose.onNodeWithTag("day-$today").assertExists()
         val folder = File(compose.activity.getExternalFilesDir(null), "qa").apply { mkdirs() }
@@ -41,5 +43,7 @@ class CalendarUiTest {
         compose.onNodeWithTag("day-$today").performClick()
         compose.onNodeWithTag("calendar-list").performScrollToNode(hasText("产品发布会", substring = false))
         compose.onNodeWithText("产品发布会").assertIsDisplayed()
+        compose.onNodeWithTag("bottom-navigation").assertIsDisplayed()
+        compose.onNodeWithTag("nav-tasks").assertIsDisplayed()
     }
 }

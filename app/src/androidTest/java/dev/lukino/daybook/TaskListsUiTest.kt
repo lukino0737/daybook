@@ -14,7 +14,7 @@ import org.junit.*
 
 class TaskListsUiTest {
     @get:Rule val compose = createComposeRule()
-    @Test fun countsMatchTaskScopesAndCreatingFromUndatedDefaultsToUndatedTask() {
+    @Test fun tasksArePartitionedAndCountsUpdateWhenCompleted() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val db = Room.inMemoryDatabaseBuilder(context, DaybookDatabase::class.java).build()
         val repo = EntryRepository(db)
@@ -28,23 +28,23 @@ class TaskListsUiTest {
                     Entry(title = "日历里的安排", date = "2026-09-10")).forEach { repo.save(it) }
             }
             compose.setContent { DaybookTheme { DaybookScreen(vm) } }
-            compose.onNodeWithText("无截止 2").performClick()
-            compose.onNodeWithText("待完成 2").assertExists()
-            compose.onNodeWithText("未设截止日期的任务").assertExists()
+            compose.onNodeWithTag("nav-tasks").performClick()
+            compose.onNodeWithText("任务 2").assertExists()
+            compose.onNodeWithText("有截止日期").assertExists()
+            compose.onNodeWithText("无截止日期").assertExists()
             compose.onNodeWithText("日历里的安排").assertDoesNotExist()
             compose.onNodeWithTag("calendar-list").performScrollToNode(hasTestTag("entry-${undated.id}"))
             compose.onNode(isToggleable() and hasAnyAncestor(hasTestTag("entry-${undated.id}"))).performClick()
             compose.waitUntil(5000) { !vm.busy.value && vm.entries.value.first { it.id == undated.id }.completed }
             compose.onNodeWithTag("calendar-list").performScrollToIndex(0)
-            compose.onNodeWithText("待完成 1").assertExists()
-            compose.onNodeWithText("无截止 2").assertExists()
+            compose.onNodeWithText("任务 1").assertExists()
             compose.onNodeWithTag("add").performClick()
             compose.onNodeWithTag("title").performTextInput("新的无截止任务")
+            compose.onNodeWithTag("clear-date").performClick()
             compose.onNodeWithText("未设截止日期").assertExists()
             compose.onNodeWithTag("save").performClick()
             compose.waitUntil(5000) { vm.draft.value == null && !vm.busy.value }
-            compose.onNodeWithText("无截止 3").assertExists()
-            compose.onNodeWithText("待完成 2").assertExists()
+            compose.onNodeWithText("任务 2").assertExists()
         } finally { store.clear(); db.close() }
     }
 }

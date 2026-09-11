@@ -49,13 +49,29 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val selected = saved.getStateFlow("selected", LocalDate.now().toString())
     val month = saved.getStateFlow("month", LocalDate.now().toString().take(7))
-    val query = saved.getStateFlow("review-query", "")
-    val tag = saved.getStateFlow("review-tag", "")
-    val reviewAll = saved.getStateFlow("review-all", false)
-    fun setQuery(value: String) { saved["review-query"] = value }
-    fun setTag(value: String) { saved["review-tag"] = value }
-    fun setReviewAll(value: Boolean) { saved["review-all"] = value }
-    fun openTag(value: String) { setTag(value); setQuery(""); setReviewAll(true); setView("review") }
+    private val reviewJson = saved.getStateFlow("review-selection", Json.encodeToString(ReviewSelection()))
+    val reviewSelection = reviewJson.map { Json.decodeFromString<ReviewSelection>(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Json.decodeFromString(reviewJson.value))
+    private val appliedJson = saved.getStateFlow<String?>("review-applied", null)
+    val appliedReview = appliedJson.map { it?.let { Json.decodeFromString<ReviewSelection>(it) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val confirmAllReview = saved.getStateFlow("review-confirm-all", false)
+    val reviewError = MutableStateFlow<String?>(null)
+    fun setReview(value: ReviewSelection) {
+        saved["review-selection"] = Json.encodeToString(value)
+        saved["review-confirm-all"] = false
+        reviewError.value = null
+    }
+    fun applyReview(confirmed: Boolean = false) {
+        val selection = Json.decodeFromString<ReviewSelection>(reviewJson.value)
+        try { selection.validate() } catch (e: Exception) { reviewError.value = e.message; return }
+        if (selection.isUnrestricted() && !confirmed) { saved["review-confirm-all"] = true; return }
+        saved["review-applied"] = Json.encodeToString(selection)
+        saved["review-confirm-all"] = false
+    }
+    fun dismissReviewConfirmation() { saved["review-confirm-all"] = false }
+    fun openTag(value: String) { setReview(ReviewSelection(tag = value)); saved["review-applied"] = null; setView("review") }
+    init { if (saved.get<String>("view") == "undated") saved["view"] = "tasks" }
     val view = saved.getStateFlow("view", "day")
     private val draftJson = saved.getStateFlow<String?>("draft", null)
     val draft = draftJson.map { it?.let { Json.decodeFromString<Draft>(it) } }
@@ -79,7 +95,6 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.tags.joinToString("，"), it.reminderAt, it.reminderDeliveredFor) }
             ?: when (view.value) {
                 "review" -> Draft(date = selected.value, kind = EntryKind.NOTE)
-                "undated" -> Draft(kind = EntryKind.TASK)
                 "tasks" -> Draft(date = selected.value, kind = EntryKind.TASK)
                 else -> Draft(date = selected.value)
             })
@@ -101,7 +116,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         val entry = draft.entry()
         repository.save(entry)
         saved["draft"] = null
-        if (view.value != "review") entry.date?.let { select(LocalDate.parse(it)); setMonth(it.take(7)) } ?: setView("undated")
+        if (view.value == "day") entry.date?.let { select(LocalDate.parse(it)); setMonth(it.take(7)) } ?: setView("tasks")
         channel.send(UiNotice.Message("已保存"))
     }
     fun toggle(entry: Entry) = runWrite {

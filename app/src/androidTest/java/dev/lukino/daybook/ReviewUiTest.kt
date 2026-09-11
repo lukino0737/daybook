@@ -30,7 +30,15 @@ class ReviewUiTest {
             runBlocking { listOf(love, old, study).forEach { repo.save(it) } }
             compose.setContent { DaybookTheme { DaybookScreen(vm) } }
             compose.onNodeWithText("回顾", useUnmergedTree = true).performClick()
+            compose.onNodeWithText("回顾 · 3 条").assertDoesNotExist()
+            compose.onNodeWithTag("apply-review").performClick()
+            compose.onNodeWithTag("review-confirm-all").assertExists()
+            compose.onNodeWithText("取消").performClick()
+            compose.onNodeWithTag("filter-kind-EVENT").assertExists()
+            compose.onNodeWithTag("filter-kind-TASK").assertExists()
+            compose.onNodeWithTag("filter-kind-NOTE").assertExists()
             compose.onNodeWithTag("filter-tag-恋爱").performClick()
+            compose.onNodeWithTag("apply-review").performClick()
             compose.onNodeWithTag("calendar-list").performScrollToNode(hasText("河边散步"))
             compose.onNodeWithText("河边散步").assertIsDisplayed()
             compose.onNodeWithText("学习笔记").assertDoesNotExist()
@@ -38,6 +46,8 @@ class ReviewUiTest {
             File(dir, "review.png").outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             compose.onNodeWithTag("calendar-list").performScrollToIndex(0)
             compose.onNodeWithTag("review-query").performTextInput("落日")
+            compose.onNodeWithText("回顾 · 2 条").assertExists()
+            compose.onNodeWithTag("apply-review").performScrollTo().performClick()
             compose.onNodeWithText("回顾 · 1 条").assertExists()
             compose.onNodeWithTag("calendar-list").performScrollToNode(hasText("河边散步"))
             compose.onNodeWithText("河边散步").performClick()
@@ -49,6 +59,7 @@ class ReviewUiTest {
             compose.onNodeWithText("回顾", useUnmergedTree = true).performClick()
             compose.onNodeWithTag("review-query").assertTextContains("落日")
             compose.onNodeWithTag("review-query").performTextReplacement("找不到的正文")
+            compose.onNodeWithTag("apply-review").performScrollTo().performClick()
             compose.onNodeWithText("回顾 · 0 条").assertExists()
         } finally { store.clear(); db.close() }
     }

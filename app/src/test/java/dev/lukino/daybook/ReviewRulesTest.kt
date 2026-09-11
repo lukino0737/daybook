@@ -14,13 +14,13 @@ class ReviewRulesTest {
         assertEquals(listOf("恋爱"), Draft(kind = EntryKind.NOTE, title = "散步", date = "2026-09-10", tagsText = "恋爱,恋爱").entry().tags)
     }
     @Test fun searchAndTagAreAnIntersectionAndIncludeBody() {
-        assertEquals(listOf(love), ReviewRules.filter(listOf(study, task, love), "落日", "恋爱", false))
-        assertTrue(ReviewRules.filter(listOf(study, love), "落日", "学习", false).isEmpty())
-        assertEquals(listOf(study), ReviewRules.filter(listOf(study, love), "kOTLIN", "", false))
+        assertEquals(listOf(love), ReviewRules.filter(listOf(study, task, love), ReviewSelection(query = "落日", tag = "恋爱", kind = EntryKind.NOTE)))
+        assertTrue(ReviewRules.filter(listOf(study, love), ReviewSelection(query = "落日", tag = "学习", kind = EntryKind.NOTE)).isEmpty())
+        assertEquals(listOf(study), ReviewRules.filter(listOf(study, love), ReviewSelection(query = "kOTLIN", tag = "", kind = EntryKind.NOTE)))
     }
     @Test fun notesDefaultAndAllKindsCanIncludeUndatedTasks() {
-        assertEquals(listOf(love, study), ReviewRules.filter(listOf(task, study, love), "", "", false))
-        assertEquals(listOf(study, task), ReviewRules.filter(listOf(task, study, love), "", "学习", true))
+        assertEquals(listOf(love, study), ReviewRules.filter(listOf(task, study, love), ReviewSelection(query = "", tag = "", kind = EntryKind.NOTE)))
+        assertEquals(listOf(study, task), ReviewRules.filter(listOf(task, study, love), ReviewSelection(query = "", tag = "学习", kind = null)))
     }
     @Test fun invalidTagsAreRejectedBeforePersistenceOrImport() {
         listOf(listOf(""), listOf(" A"), listOf("a", "a"), listOf("a,b"), listOf("长".repeat(31)), (1..11).map { "$it" })
@@ -29,6 +29,6 @@ class ReviewRulesTest {
     @Test fun sameDateOrderingIsStableAndNewestFirst() {
         val early = love.copy(id = "00000000-0000-0000-0000-000000000010", time = "08:00")
         val late = love.copy(id = "00000000-0000-0000-0000-000000000011", time = "21:00")
-        assertEquals(listOf(late, early, love), ReviewRules.filter(listOf(early, love, late), "", "", false))
+        assertEquals(listOf(late, early, love), ReviewRules.filter(listOf(early, love, late), ReviewSelection(query = "", tag = "", kind = EntryKind.NOTE)))
     }
 }

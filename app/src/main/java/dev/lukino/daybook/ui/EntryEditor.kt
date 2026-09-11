@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +63,7 @@ import java.time.format.DateTimeFormatter
                             val d = draft.date?.let(LocalDate::parse) ?: LocalDate.now()
                             DatePickerDialog(context, { _, y, m, day -> onChange(draft.copy(date = LocalDate.of(y, m + 1, day).toString())) }, d.year, d.monthValue - 1, d.dayOfMonth).show()
                         }) { Text(draft.date ?: "未设截止日期") }
-                        if (draft.kind == EntryKind.TASK && draft.date != null) TextButton(enabled = !busy, onClick = { onChange(draft.copy(date = null, time = null)) }) { Text("不设日期") }
+                        if (draft.kind == EntryKind.TASK && draft.date != null) IconButton(enabled = !busy, modifier = Modifier.testTag("clear-date"), onClick = { onChange(draft.copy(date = null, time = null)) }) { Icon(Icons.Outlined.Close, "清除截止日期") }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(enabled = !busy && draft.date != null, onClick = {

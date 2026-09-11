@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.EditCalendar
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,9 +39,10 @@ import androidx.compose.material.icons.outlined.MoreVert
     val selected by vm.selected.collectAsStateWithLifecycle()
     val month by vm.month.collectAsStateWithLifecycle()
     val view by vm.view.collectAsStateWithLifecycle()
-    val query by vm.query.collectAsStateWithLifecycle()
-    val tag by vm.tag.collectAsStateWithLifecycle()
-    val reviewAll by vm.reviewAll.collectAsStateWithLifecycle()
+    val selection by vm.reviewSelection.collectAsStateWithLifecycle()
+    val applied by vm.appliedReview.collectAsStateWithLifecycle()
+    val confirmAll by vm.confirmAllReview.collectAsStateWithLifecycle()
+    val reviewError by vm.reviewError.collectAsStateWithLifecycle()
     val knownTags = remember(entries) { entries.flatMap { it.tags }.distinct().sorted() }
     val draft by vm.draft.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -72,15 +76,21 @@ import androidx.compose.material.icons.outlined.MoreVert
         }
     }
     val visible = when (view) {
-        "review" -> ReviewRules.filter(entries, query, tag, reviewAll)
-        "undated" -> entries.filter { it.kind == EntryKind.TASK && it.date == null }.sortedBy { it.completed }
+        "review" -> applied?.let { ReviewRules.filter(entries, it) }.orEmpty()
         "tasks" -> entries.filter { it.kind == EntryKind.TASK && !it.completed }.sortedWith(compareBy<Entry> { it.date ?: "9999-12-31" }.thenBy { it.time ?: "24:00" })
         else -> EntryRules.forDay(entries, LocalDate.parse(selected))
     }
     Scaffold(
         topBar = { TopAppBar(title = { Column { Text("Daybook", style = MaterialTheme.typography.headlineSmall); Text("把日子，记在一起。", style = MaterialTheme.typography.labelMedium) } },
             actions = {
-                TextButton(onClick = vm::today) { Text("今天") }
+                if (view == "day" && (selected != now.toLocalDate().toString() || month != YearMonth.from(now).toString())) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        TextButton(onClick = vm::today, modifier = Modifier.testTag("today")) { Text("今天") }
+                        relativeDayLabel(LocalDate.parse(selected), now.toLocalDate())?.let {
+                            Text(it, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
                 Box {
                     IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "备份与恢复") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -91,20 +101,20 @@ import androidx.compose.material.icons.outlined.MoreVert
                     }
                 }
             }) },
-        floatingActionButton = { ExtendedFloatingActionButton(onClick = { vm.edit() }, icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("记一笔") }, modifier = Modifier.testTag("add")) },
+        bottomBar = { NavigationBar(Modifier.testTag("bottom-navigation"), containerColor = MaterialTheme.colorScheme.surface) {
+            listOf(Triple("day", "日历", Icons.Outlined.CalendarMonth),
+                Triple("tasks", "任务", Icons.Outlined.Checklist), Triple("review", "回顾", Icons.Outlined.History)).forEach { (key, label, icon) ->
+                NavigationBarItem(selected = view == key, onClick = { vm.setView(key) }, modifier = Modifier.testTag("nav-$key"),
+                    icon = { Icon(icon, null) }, label = { Text(if (key == "tasks") "$label ${entries.count { it.kind == EntryKind.TASK && !it.completed }}" else label) })
+            }
+        } },
+        floatingActionButton = { FloatingActionButton(onClick = { vm.edit() }, modifier = Modifier.testTag("add")) { Icon(Icons.Outlined.Add, "记一笔") } },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("calendar-list"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (busy && draft == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = view == "day", onClick = { vm.setView("day") }, label = { Text("日历") })
-                FilterChip(selected = view == "undated", onClick = { vm.setView("undated") }, label = { Text("无截止 ${entries.count { it.kind == EntryKind.TASK && it.date == null }}") })
-                FilterChip(selected = view == "review", onClick = { vm.setView("review") }, label = { Text("回顾") })
-                FilterChip(selected = view == "tasks", onClick = { vm.setView("tasks") }, label = { Text("待完成 ${entries.count { it.kind == EntryKind.TASK && !it.completed }}") })
-            } }
-            if (view == "undated" && visible.isNotEmpty()) item { Text("未设截止日期的任务，包括已完成项。", style = MaterialTheme.typography.bodySmall) }
             if (view == "review") item {
-                ReviewFilters(query, tag, reviewAll, knownTags, vm::setQuery, vm::setTag, vm::setReviewAll)
+                ReviewFilters(selection, knownTags, reviewError, vm::setReview, { vm.applyReview() })
             }
             if (entries.any { it.reminderAt != null && !it.completed }) item { ReminderStatus { reminderSettings = true } }
             if (view == "day") {
@@ -119,22 +129,35 @@ import androidx.compose.material.icons.outlined.MoreVert
                     items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
                 }
             }
-            item { Text(when (view) { "undated" -> "未设截止日期的任务"; "tasks" -> "待完成任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge) }
-            if (visible.isEmpty()) item {
+            if (view != "review" || applied != null) item {
+                Text(when (view) { "tasks" -> "任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge)
+            }
+            if (visible.isEmpty() && (view != "review" || applied != null)) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.EditCalendar, null, tint = Green)
                     Text(if (view == "day") "这一天，留给你慢慢写。" else if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
                     Text(when (view) {
-                        "undated" -> "这里仅显示未设截止日期的任务。日历中的安排请到“日历”查看。"
                         "tasks" -> "这里显示所有未完成任务，包括已设和未设截止日期的任务。"
                         "review" -> "试试清除搜索或标签，或切换到全部类型。"
-                        else -> "安排、截止任务和生活片段，都可以记在这里。"
+                        else -> "日程、截止任务和生活片段，都可以记在这里。"
                     }, style = MaterialTheme.typography.bodyMedium)
                 } }
             }
-            items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day", onTag = vm::openTag) }
+            if (view == "tasks") {
+                listOf(true, false).forEach { dated ->
+                    val group = visible.filter { (it.date != null) == dated }
+                    if (group.isNotEmpty()) {
+                        item { Text(if (dated) "有截止日期" else "无截止日期", style = MaterialTheme.typography.titleSmall) }
+                        items(group, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
+                    }
+                }
+            } else items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day", onTag = vm::openTag) }
         }
     }
+    if (confirmAll) AlertDialog(onDismissRequest = vm::dismissReviewConfirmation,
+        modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
+        confirmButton = { TextButton(onClick = { vm.applyReview(true) }) { Text("确定") } },
+        dismissButton = { TextButton(onClick = vm::dismissReviewConfirmation) { Text("取消") } })
     if (reminderSettings) AlertDialog(onDismissRequest = { reminderSettings = false },
         title = { Text("提醒设置") }, text = { Column(Modifier.verticalScroll(rememberScrollState())) { ReminderPermissions() } },
         confirmButton = { TextButton(onClick = { reminderSettings = false }) { Text("完成") } })
