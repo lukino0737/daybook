@@ -19,6 +19,9 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.lukino.daybook.calendar.FestivalCalendar
+import dev.lukino.daybook.calendar.HolidayMark
+import androidx.compose.ui.text.style.TextOverflow
 import dev.lukino.daybook.data.Entry
 import java.time.LocalDate
 import java.time.YearMonth
@@ -37,6 +40,7 @@ fun relativeDayLabel(selected: LocalDate, today: LocalDate): String? {
 
 @Composable fun MonthCalendar(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onMonth: (YearMonth) -> Unit, onSelect: (LocalDate) -> Unit) {
     val groups = remember(entries) { entries.groupBy { it.date } }
+    val notes = remember(month) { monthCells(month).filterNotNull().associateWith(FestivalCalendar::forDate) }
     val threshold = with(LocalDensity.current) { 48.dp.toPx() }
     Column(Modifier.testTag("month-calendar").pointerInput(month, threshold) {
         var distance = 0f
@@ -60,17 +64,26 @@ fun relativeDayLabel(selected: LocalDate, today: LocalDate): String? {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 week.forEach { date ->
                     val items = groups[date?.toString()].orEmpty()
-                    Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = 58.dp)
+                    val note = notes[date]
+                    Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = 66.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (date != null && date == selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                         .then(if (date == null) Modifier else Modifier.clickable { onSelect(date) }.testTag("day-$date")
-                            .semantics { contentDescription = "$date，${items.size} 条记录${if (date == today) "，今天" else ""}" })
+                            .semantics { contentDescription = "$date，${items.size} 条记录${if (date == today) "，今天" else ""}${note?.description?.takeIf { it.isNotEmpty() }?.let { "，$it" }.orEmpty()}" })
                         .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (date != null) {
                             Box(Modifier.size(30.dp).clip(CircleShape).background(if (date == today) Green else Color.Transparent), contentAlignment = Alignment.Center) {
                                 Text(date.dayOfMonth.toString(), fontSize = 16.sp, color = if (date == today) Color.White else Ink, fontWeight = if (date == selected) FontWeight.Bold else FontWeight.Normal)
                             }
-                            Box(Modifier.size(4.dp).then(if (items.isNotEmpty()) Modifier.background(Green, CircleShape).testTag("marker-$date") else Modifier))
+                            Text(note?.festivals.orEmpty().joinToString("/"),
+                                fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.height(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                if (items.isNotEmpty()) Box(Modifier.size(4.dp).background(Green, CircleShape).testTag("marker-$date"))
+                                note?.holiday?.let { mark -> Box(Modifier.size(4.dp)
+                                    .background(if (mark == HolidayMark.OFF) Color(0xFF287CC1) else Color(0xFFCC4545), CircleShape)
+                                    .testTag("holiday-${mark.name}-$date")) }
+                            }
                         }
                     }
                 }

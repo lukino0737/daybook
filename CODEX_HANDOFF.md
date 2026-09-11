@@ -5,10 +5,10 @@
 - 起点：v0.2.0 已发布，main 最近稳定 bcb27ff；原有两处未提交文件是反馈记录，已合并到当前工作。
 - 当前阶段 A：底部三入口、紧凑日历/左右滑动、任务分区、“日程”名称及叉号清除任务日期、回顾显式筛选已实现并验证。代码提交 3a9281911f4dacebf8496a61bceda1c3264fa471，已推送并核对远程 main。
 - 已验证：30 项 JVM 单测通过；15 项常规仪器用例通过（首轮日历标记定位失败，work/v03-calendar-test.log 复测通过）；3 项条件用例跳过。Debug/Lint 通过，outputs/v03-calendar-draft.png 已目视检查。
-- 阶段 B 仅完成官方公告核对，资料已保存 docs/HOLIDAY-SOURCES.md，尚未编写节假日代码。
-- 剩余：从 B 节假日实现开始；然后 C 独立提醒权限页面/默认振动声音/删除冗余，最终截图、文档、同签名升级、v0.3.0 发布。版本号仍是 0.2.0，不要将当前 Debug 当作最终新版发布。
+- 阶段 B 已完成：内置官方 2025/2026 调休表、常用公历/农历节日、三色日历标记与日期详情。资料见 docs/HOLIDAY-SOURCES.md。32 项 JVM 单测、3 项针对性模拟器用例、Debug/Lint 通过，准备阶段提交。
+- 剩余：C 独立提醒权限页面/默认振动声音/删除冗余，最终截图、文档、同签名升级、v0.3.0 发布。版本号仍是 0.2.0，不要将当前 Debug 当作最终新版发布。
 - 数据：数据库与备份结构未改变，EVENT 仅中文显示名变为日程，不改稳定标识。禁止清理用户数据或提交真实记录/签名材料。
 - 重要路径：app/；docs/V0.3-PLAN.md；work/v03-build.log、work/v03-tests.log；既有工具 work/；旧版 APK outputs/daybook-v0.2.0.apk；签名仍在忽略的本地文件。
-- 额度：安全暂停。最近检查两个窗口均剩余约 11%，不足以稳妥完成下一阶段，按用户规则保存后暂停。恢复先检查额度，不重复已通过的 A 验证。
+- 额度：2026-09-11 恢复时五小时剩余 99%、周剩余 100%，继续正常执行。不重复已通过的 A 验证。
 - 构建环境：JAVA_HOME=$PWD/work/tooling/jdk-21.0.12.1.jdk/Contents/Home；GRADLE_USER_HOME=$PWD/work/gradle-user；ANDROID_USER_HOME=$PWD/work/android-user；ANDROID_HOME=$PWD/work/android-sdk。GitHub 操作可用 python3 work/github_cli.py；签名凭据不得输出。
 - 已知限制：真实手机通知声音/振动/悬浮仍待验证；现有渠道声音振动设置须由用户在系统管理。教程不在本版。

@@ -24,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.lukino.daybook.data.*
+import dev.lukino.daybook.calendar.FestivalCalendar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.time.LocalDate
@@ -75,6 +76,7 @@ import androidx.compose.material.icons.outlined.MoreVert
             }
         }
     }
+    val selectedNote = remember(selected) { FestivalCalendar.forDate(LocalDate.parse(selected)) }
     val visible = when (view) {
         "review" -> applied?.let { ReviewRules.filter(entries, it) }.orEmpty()
         "tasks" -> entries.filter { it.kind == EntryKind.TASK && !it.completed }.sortedWith(compareBy<Entry> { it.date ?: "9999-12-31" }.thenBy { it.time ?: "24:00" })
@@ -131,6 +133,7 @@ import androidx.compose.material.icons.outlined.MoreVert
             }
             if (view != "review" || applied != null) item {
                 Text(when (view) { "tasks" -> "任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge)
+                if (view == "day" && selectedNote.description.isNotEmpty()) Text(selectedNote.description, style = MaterialTheme.typography.labelMedium, color = Green)
             }
             if (visible.isEmpty() && (view != "review" || applied != null)) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
