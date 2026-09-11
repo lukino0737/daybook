@@ -14,6 +14,8 @@
 | 150% 字体 | 2 项专项通过：引导进入设置、重建与返回，以及编辑草稿保留；执行后恢复字体设置 |
 | 布局 | 首次引导及提醒设置上下部分截图目视检查，无文字或按钮遮挡；可滚动查看全部推荐设置 |
 
+提交 c13a6de 的 [GitHub CI 34588359728](https://github.com/lukino0737/daybook/actions/runs/34588359728) 已通过，包含构建、JVM 单测与 Lint；自动 CI 结果不代表跨品牌真机验收。
+
 日志：work/startup-build.log、startup-device.log（8 项仪器用例全部执行）、startup-permission.log、startup-large-font.log；截图及真实系统弹窗驱动位于 work/startup-qa/。新首启偏好独立存储，不改 Room/JSON/提醒调度，不移动发布标签。
 
 已处理的验证故障：第一次测试代码有方法声明笔误，修正后构建通过；外部 UI 脚本曾在点击跳过尚未处理时立即强停 App，导致下次仍显示引导。改为等首页出现再强停后，三条实际授权路径均通过；不是通过改产品逻辑掩盖问题。初次 Gradle/ADB 启动受沙盒本地通信限制，获工具审批后正常完成。

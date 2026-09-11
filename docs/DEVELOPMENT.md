@@ -125,3 +125,5 @@
 - 现有 Activity UI 用例通过 ReturningUserRule 明确采用已完成引导的用户状态；新增用例单独验证冷启动引导，不通过生产代码测试开关跳过流程。
 - 学习入口：StartupReminderSetup（权限结果与一次性引导）、BackgroundSettingsProfile（品牌差异与通用回退）、StartupReminderSetupTest（跳过、重建、重新启动和设置返回）。
 - 验证结果详见 docs/TESTING.md 的未发布改动部分；仅运行相关专项，复用 v0.3.0 既有验收。
+
+- 完成提交 c13a6de 并推送 main，远程提交一致；GitHub CI 34588359728 通过。提醒设置预览及验证证据已保存，专用模拟器已关闭。本轮未发布新 APK。

@@ -84,7 +84,7 @@ Daybook 是可持续维护的离线安卓个人日历，统一日程、任务和
 
 - 本轮接手时 `main` 与本地 origin/main 为 `1796e76`，工作区干净；当前 HEAD 请以 `git log -1` 为准，已发布标签保持原位。
 - 最近稳定发布代码：`827709a3d132b3b255f1107c8a3700fa0b1e7c72`，标签 `v0.3.0`。不要移动已发布标签或强推。
-- 本次包含未发布业务代码、对应测试与文档，完成后作为一个里程碑提交并推送 main；没有改版本号、移动标签或上传新 Release。
+- 本轮业务代码与验证记录提交 `c13a6de` 已推送 main 并核对远程，GitHub CI 34588359728 通过；之后仅补充收尾文档，当前 HEAD 以 git log 为准。没有改版本号、移动标签或上传新 Release。
 - APK：outputs/daybook-v0.3.0.apk（约 12 MB）。SHA-256：`1fdd6fedb3fb99ccb720d3f03eaf3fda94bad763eef8748edab0db050e875fa1`，交接时重算一致。
 - 校验文件：outputs/SHA256SUMS-v0.3.0.txt。发布时远程 APK/校验文件 digest 已核对；证据 work/v03-published-release.json，交接时读取本地证据，未重新联网验收。
 - 源码归档：outputs/daybook-v0.3.0-source.zip，来自发布代码，不含之后仅文档的交接补充；最新交接应读取本工作区或 main。
