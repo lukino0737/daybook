@@ -112,3 +112,5 @@
 - Debug/Release 构建、32 项单测、19 项常规模拟器用例、权限拒绝、大字体、覆盖升级通过。真机声音/振动/静音表现仍待用户试用，不能用模拟器配置检查代替。
 - 学习入口：ReminderCoordinator.defaultChannel 说明渠道创建时的默认值；MainActivity.onResume 保留返回前台自动核对；UpgradeContinuityTest 的扩展样例验证“改界面而不丢数据”。
 - APK 已就绪，SHA-256 为 1fdd6fedb3fb99ccb720d3f03eaf3fda94bad763eef8748edab0db050e875fa1。版本附件发布后记录远程结果。
+
+- 发布确认：v0.3.0 标签指向 827709a，GitHub CI [34560985624](https://github.com/lukino0737/daybook/actions/runs/34560985624) 通过；[版本附件](https://github.com/lukino0737/daybook/releases/tag/v0.3.0) 已上传，APK 和校验文件远程 digest 核对一致。专用模拟器已停止，等待真机试用反馈。

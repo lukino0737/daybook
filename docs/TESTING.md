@@ -20,6 +20,8 @@
 
 范围与限制：官方放假调休及清明名称覆盖 2025/2026，其他年份不推测放假/补班。农历节日使用 Android ICU。通知配置检查不能代替真实手机声音、振动、悬浮或静音模式验收；当前模拟器关闭宿主音频。旧渠道由用户在系统设置中管理，App 不覆盖用户设置、不绕过勿扰。Android 8 与品牌省电策略未实测。
 
+发布代码 827709a 的 [GitHub CI 34560985624](https://github.com/lukino0737/daybook/actions/runs/34560985624) 通过；版本附件远程 digest 核对一致。Actions 版本弃用提示保留，未影响检查。
+
 APK SHA-256：`1fdd6fedb3fb99ccb720d3f03eaf3fda94bad763eef8748edab0db050e875fa1`。
 
 ---
