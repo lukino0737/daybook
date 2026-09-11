@@ -3,6 +3,8 @@ package dev.lukino.daybook.reminder
 import android.app.*
 import android.content.*
 import android.net.Uri
+import android.media.AudioAttributes
+import android.provider.Settings
 import android.os.Build
 import dev.lukino.daybook.MainActivity
 import dev.lukino.daybook.R
@@ -23,7 +25,10 @@ class ReminderCoordinator(private val context: Context, private val repository: 
     private val lock = Mutex()
     val failure = MutableStateFlow<String?>(null)
 
-    init { notifications.createNotificationChannel(NotificationChannel(CHANNEL, "事项提醒", NotificationManager.IMPORTANCE_HIGH)) }
+    init {
+        // Existing channels belong to the user. Keep their sound/vibration/importance unchanged.
+        if (notifications.getNotificationChannel(CHANNEL) == null) notifications.createNotificationChannel(defaultChannel())
+    }
     fun notificationsEnabled(): Boolean = notifications.areNotificationsEnabled() &&
         notifications.getNotificationChannel(CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE
     fun exactEnabled(): Boolean = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
@@ -81,6 +86,12 @@ class ReminderCoordinator(private val context: Context, private val repository: 
     }
 
     companion object {
+        internal fun defaultChannel() = NotificationChannel(CHANNEL, "事项提醒", NotificationManager.IMPORTANCE_HIGH).apply {
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 250, 150, 250)
+            setSound(Settings.System.DEFAULT_NOTIFICATION_URI, AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+        }
         const val CHANNEL = "daybook.reminders"
         const val ACTION_DUE = "dev.lukino.daybook.REMINDER_DUE"
     }

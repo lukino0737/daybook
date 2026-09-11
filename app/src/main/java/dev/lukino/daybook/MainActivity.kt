@@ -25,6 +25,10 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         openNotification(intent)
     }
+    override fun onResume() {
+        super.onResume()
+        (application as DaybookApplication).reminders.refresh()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) openNotification(intent)

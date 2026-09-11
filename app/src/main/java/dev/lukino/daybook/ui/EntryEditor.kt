@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -31,6 +32,7 @@ import java.time.format.DateTimeFormatter
     knownTags: List<String> = emptyList(),
 ) {
     val context = LocalContext.current
+    var reminderSettings by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val view = LocalView.current
@@ -74,7 +76,7 @@ import java.time.format.DateTimeFormatter
                     }
                     if (draft.kind == EntryKind.TASK) Text("只设日期时，当天结束后才算逾期。这里记录的是截止时间。", style = MaterialTheme.typography.bodySmall)
                     TagEditor(draft, busy, knownTags, onChange)
-                    if (draft.kind != EntryKind.NOTE) ReminderEditor(draft, busy, onChange)
+                    if (draft.kind != EntryKind.NOTE) ReminderEditor(draft, busy, onChange) { reminderSettings = true }
                     OutlinedTextField(value = draft.note, onValueChange = { if (it.length <= 20_000) onChange(draft.copy(note = it)) },
                         label = { Text(if (draft.kind == EntryKind.NOTE) "今天发生了什么" else "备注 · 链接、地点、细节") }, modifier = Modifier.fillMaxWidth().testTag("note"), enabled = !busy, minLines = 4)
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -83,6 +85,7 @@ import java.time.format.DateTimeFormatter
                 }
             }
         }
+        if (reminderSettings) ReminderSettingsScreen { reminderSettings = false }
         if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("删除这条记录？") },
             text = { Text("删除后可通过底部提示短时撤销。") },
             confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete?.invoke() }) { Text("删除") } },

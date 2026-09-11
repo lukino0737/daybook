@@ -1,8 +1,6 @@
 package dev.lukino.daybook.ui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +12,7 @@ import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -52,7 +51,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     val pending by vm.pendingRestore.collectAsStateWithLifecycle()
     val restoringSnapshot by vm.restoringSnapshot.collectAsStateWithLifecycle()
     val historyVersion by vm.historyVersion.collectAsStateWithLifecycle()
-    var reminderSettings by remember { mutableStateOf(false) }
+    var reminderSettings by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::previewImport) }
@@ -118,7 +117,6 @@ import androidx.compose.material.icons.outlined.MoreVert
             if (view == "review") item {
                 ReviewFilters(selection, knownTags, reviewError, vm::setReview, { vm.applyReview() })
             }
-            if (entries.any { it.reminderAt != null && !it.completed }) item { ReminderStatus { reminderSettings = true } }
             if (view == "day") {
                 item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
                     { vm.setMonth(it.toString()) }, vm::select) }
@@ -161,9 +159,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
         confirmButton = { TextButton(onClick = { vm.applyReview(true) }) { Text("确定") } },
         dismissButton = { TextButton(onClick = vm::dismissReviewConfirmation) { Text("取消") } })
-    if (reminderSettings) AlertDialog(onDismissRequest = { reminderSettings = false },
-        title = { Text("提醒设置") }, text = { Column(Modifier.verticalScroll(rememberScrollState())) { ReminderPermissions() } },
-        confirmButton = { TextButton(onClick = { reminderSettings = false }) { Text("完成") } })
+    if (reminderSettings) ReminderSettingsScreen { reminderSettings = false }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
         entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags) }
     pending?.let { archive ->

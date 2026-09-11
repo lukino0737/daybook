@@ -50,7 +50,8 @@ class ReviewUiTest {
             compose.onNodeWithTag("apply-review").performScrollTo().performClick()
             compose.onNodeWithText("回顾 · 1 条").assertExists()
             compose.onNodeWithTag("calendar-list").performScrollToNode(hasText("河边散步"))
-            compose.onNodeWithText("河边散步").performClick()
+            // Tap the title itself: the merged card center can fall on an interactive tag at large font sizes.
+            compose.onNodeWithText("河边散步", useUnmergedTree = true).performClick()
             compose.onNodeWithTag("tags").performScrollTo().performTextReplacement("恋爱，散步，恋爱")
             compose.onNodeWithTag("save").performClick()
             compose.waitUntil(5000) { vm.draft.value == null && !vm.busy.value }
