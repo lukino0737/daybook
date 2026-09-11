@@ -1,15 +1,13 @@
 # Daybook 恢复记录
 
-- 当前目标：实施已确认的 v0.3.0 界面、筛选、节假日及提醒改动，方案见 docs/V0.3-PLAN.md。
-- 授权：用户 2026-09-11 确认节假日 APK 内置、保留现有通知渠道，可以开始。无需重复询问已确认方案。
-- 起点：v0.2.0 已发布，main 最近稳定 bcb27ff；原有两处未提交文件是反馈记录，已合并到当前工作。
-- 当前阶段 A：底部三入口、紧凑日历/左右滑动、任务分区、“日程”名称及叉号清除任务日期、回顾显式筛选已实现并验证。代码提交 3a9281911f4dacebf8496a61bceda1c3264fa471，已推送并核对远程 main。
-- 已验证：30 项 JVM 单测通过；15 项常规仪器用例通过（首轮日历标记定位失败，work/v03-calendar-test.log 复测通过）；3 项条件用例跳过。Debug/Lint 通过，outputs/v03-calendar-draft.png 已目视检查。
-- 阶段 B 已完成：内置官方 2025/2026 调休表、常用公历/农历节日、三色日历标记与日期详情。资料见 docs/HOLIDAY-SOURCES.md。32 项 JVM 单测、3 项针对性模拟器用例、Debug/Lint 通过；B 提交 036408a 已推送核对。
-- 阶段 C 功能已完成：独立提醒页、既有渠道保留、新渠道声音/振动/高重要性、删除冗余与手动按钮，自动核对保留。32 项单测、19 项常规模拟器、拒绝通知专项通过；150% 字体 3 项通过（回顾点击标题定位修正后复测）。
-- 剩余：最终截图、文档、同签名升级、v0.3.0 发布。README/USAGE 已开始同步，尚未提交；版本号仍是 0.2.0。当前日志 work/v03-regression-device.log、work/v03-denied-device.log、work/v03-large-font-device.log 和 work/v03-large-font-retest.log。模拟器已恢复字体 1.0。
-- 数据：数据库与备份结构未改变，EVENT 仅中文显示名变为日程，不改稳定标识。禁止清理用户数据或提交真实记录/签名材料。
-- 重要路径：app/；docs/V0.3-PLAN.md；work/v03-build.log、work/v03-tests.log；既有工具 work/；旧版 APK outputs/daybook-v0.2.0.apk；签名仍在忽略的本地文件。
-- 额度：2026-09-11 恢复时五小时剩余 99%、周剩余 100%，继续正常执行。不重复已通过的 A 验证。
-- 构建环境：JAVA_HOME=$PWD/work/tooling/jdk-21.0.12.1.jdk/Contents/Home；GRADLE_USER_HOME=$PWD/work/gradle-user；ANDROID_USER_HOME=$PWD/work/android-user；ANDROID_HOME=$PWD/work/android-sdk。GitHub 操作可用 python3 work/github_cli.py；签名凭据不得输出。
-- 已知限制：真实手机通知声音/振动/悬浮仍待验证；现有渠道声音振动设置须由用户在系统管理。教程不在本版。
+- 当前目标：用户批准的 v0.3.0 改动已完成工程验收，准备提交版本并发布 GitHub Release。
+- 已完成：A 固定底部导航、紧凑滑动日历、任务分区、日程命名与日期规则、显式回顾筛选（3a92819）；B 内置官方 2025/2026 假期/补班及常用节日（036408a）；C 独立提醒设置页、既有渠道保留、新渠道系统声/振动/高重要性、删除冗余与手动按钮（1382f83）。均已推送 main。
+- 版本：0.3.0 / code 3，Room schema 3 / JSON 3 不变，同签名沿用旧版本。没有数据库破坏性迁移。
+- 已验证：32 项 JVM 单测，19 项常规模拟器用例；权限拒绝、150% 字体、真实 v0.2→v0.3 覆盖升级通过。Debug/Release/Lint 通过。Release 全新安装 UI 与渠道配置通过；后台进程退出后实际通知与顶部悬浮通过，已发送状态核对通过。
+- 失败记录：大字体回顾测试点击合并卡片中心触发了标签，改为点击标题本身后复测通过。详情见 docs/TESTING.md，未将失败或跳过记作通过。
+- 交付物：outputs/daybook-v0.3.0.apk、outputs/SHA256SUMS-v0.3.0.txt；SHA-256 1fdd6fedb3fb99ccb720d3f03eaf3fda94bad763eef8748edab0db050e875fa1。README 三张截图、USAGE、BUILD、TESTING、BACKLOG 和发布说明已同步。
+- 待做：提交交付文件，核对 GitHub CI；创建 v0.3.0 标签、上传 APK 和校验文件，核对远程 digest；最后保存发布结果、停止专用模拟器。
+- 证据：work/v03-reminder-build.log、work/v03-regression-device.log、work/v03-large-font-retest.log、work/v03-release-build.log、work/v03-upgrade.log、work/v03-release-ui.log、work/v03-lifecycle-*.log。截图 docs/screenshots/；实际悬浮 outputs/v03-heads-up.png。
+- 工具：JAVA_HOME=$PWD/work/tooling/jdk-21.0.12.1.jdk/Contents/Home；GRADLE_USER_HOME=$PWD/work/gradle-user；ANDROID_USER_HOME=$PWD/work/android-user；ANDROID_HOME=$PWD/work/android-sdk。GitHub 使用 python3 work/github_cli.py。work/verify_upgrade_v03.py 已完成升级验证，不需重跑。
+- 重要限制：官方调休表和清明仅覆盖 2025/2026；真机声音/振动/静音与厂商省电策略未验证。教程、生日循环、照片、背景和同步留后续，新增宏观方案先请用户确认。
+- 数据安全：签名仍在忽略的本地配置，禁止输出凭据。不要提交真实记录、签名、构建产物；只操作专用模拟器 Daybook_API_35，不清理用户手机数据。

@@ -54,3 +54,7 @@ keyPassword=YOUR_LOCAL_PASSWORD
 - 跨版本：先安装真实旧 APK 与对应旧测试 APK 运行 seed；直接覆盖新版 APK，替换测试 APK 后运行新版 verify。不能仅用当前 debug 与当前 release 冒充历史升级验证。
 
 Room 历史 schema 位于 app/schemas；新增结构需提供迁移及历史 schema 测试，禁止破坏性重建。旧 JSON 导入保留稳定 ID，导出统一采用格式 3。
+
+## v0.3 覆盖升级补充
+
+v0.2 → v0.3 可使用新版同签名测试 APK，在真实 v0.2 App 上以 `daybookUpgrade=seed`、`daybookUpgradeFields=extended`、`expectedVersion=0.2.0` 运行 UpgradeContinuityTest；覆盖安装新版后以 `verify` 和 `expectedVersion=0.3.0` 运行。扩展样例额外验证标签、提醒已发送状态、EVENT 日程和原通知渠道配置。历史 v0.1 升级仍使用旧版测试 APK seed，默认基础样例不变。
