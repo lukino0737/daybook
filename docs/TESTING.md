@@ -18,13 +18,15 @@
 
 旧模拟器的数据目录保持原样；覆盖升级在 work/v04/upgrade-avd 内的独立 Daybook_API_35 实例完成，没有卸载或清空旧 QA 数据。升级脚本首次把“尚未安装”退出码当作错误，在任何安装前退出；改用包列表断言后上述有效流程通过。
 
-阶段 CI：A/B [34751483037](https://github.com/lukino0737/daybook/actions/runs/34751483037)、C [34751845966](https://github.com/lukino0737/daybook/actions/runs/34751845966)、D [34761242134](https://github.com/lukino0737/daybook/actions/runs/34761242134) 均通过。正式交付提交的 CI 结果另在交接记录补充。
+阶段 CI：A/B [34751483037](https://github.com/lukino0737/daybook/actions/runs/34751483037)、C [34751845966](https://github.com/lukino0737/daybook/actions/runs/34751845966)、D [34761242134](https://github.com/lukino0737/daybook/actions/runs/34761242134) 均通过。交付代码 8e03e3b 的 [CI 34762134277](https://github.com/lukino0737/daybook/actions/runs/34762134277) 也通过。
 
 已解决的失败：早期日历 scrollToPage 引起列表子布局测量重入，改为 requestScrollToPage 后相关两项通过；便签通知测试缺空值判断导致编译失败，随后误运行旧测试包的类缺失不算有效验证；修正并重新构建后 7 项通过。模拟器启动两次自动审批超时均按工具提示重试成功，不是产品故障。
 
 证据：work/v04/a-*.log、b-*.log、c-*.log、d-*.log、memo-large-ime.log、release-build.log、upgrade.log、release-verification.json；预览 work/v04/previews。
 
 限制：既有提醒异常需更长实测，按用户要求暂不排查；跨品牌后台送达、真机声音/振动/悬浮和 Android 8–12 设备实测仍未完成。低版本选图使用 AndroidX 系统回退合同，旧解码路径已在 API 35 专项调用，但不能当作 Android 8 真机通过。背景仅本机保存、不进 JSON；首版无手动调色。没有新增联网或相册范围权限、外部服务或库。
+
+本地交付已就绪。远程标签/Release 因缺少此次公开发布的明确授权被自动审批阻止，未执行发布命令；GitHub 上公开附件仍为 v0.3.0。
 
 APK SHA-256：`272a63c177889f63be663be17bd7a3baeefb0028422514e60be7cef05a460911`。
 
