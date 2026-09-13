@@ -1,6 +1,9 @@
 package dev.lukino.daybook
 
 import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,9 +39,12 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) openNotification(intent)
         enableEdgeToEdge()
         setContent {
-            DaybookTheme {
+            val appearance by (application as DaybookApplication).appearance.state.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalAppearance provides appearance.current) {
+            DaybookTheme(appearance.current?.seed) {
                 DaybookScreen(model)
                 StartupReminderSetup()
+            }
             }
         }
     }

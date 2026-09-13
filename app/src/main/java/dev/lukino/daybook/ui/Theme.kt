@@ -9,8 +9,8 @@ val Ink = Color(0xFF27392F)
 val Green = Color(0xFF466553)
 val Clay = Color(0xFFA34D34)
 
-@Composable fun DaybookTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = lightColorScheme(
+@Composable fun DaybookTheme(seed: Int? = null, content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = seed?.let(::imageColorScheme) ?: lightColorScheme(
         primary = Green, onPrimary = Color.White,
         primaryContainer = Color(0xFFE3EADD), onPrimaryContainer = Ink,
         secondary = Green, secondaryContainer = Color(0xFFE3EADD), onSecondaryContainer = Ink,
@@ -20,4 +20,31 @@ val Clay = Color(0xFFA34D34)
         surfaceVariant = Color(0xFFECE9DE), onSurfaceVariant = Color(0xFF62695F),
         error = Clay, outline = Color(0xFFB9BCAF),
     ), content = content)
+}
+
+fun imageColorScheme(seed: Int): ColorScheme {
+    val hsl = FloatArray(3)
+    androidx.core.graphics.ColorUtils.colorToHSL(seed, hsl)
+    val saturation = hsl[1].coerceAtMost(.55f)
+    fun tone(light: Float, chroma: Float = saturation) = Color(androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf(hsl[0], chroma, light)))
+    var light = .32f
+    while (androidx.core.graphics.ColorUtils.calculateContrast(
+            androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, light)), android.graphics.Color.WHITE) < 9.0) light -= .01f
+    val accent = tone(light)
+    val ink = tone(.13f, saturation * .3f)
+    val paper = tone(.975f, saturation * .25f)
+    val container = tone(.9f, saturation * .45f)
+    return lightColorScheme(
+        primary = accent, onPrimary = Color.White, primaryContainer = container, onPrimaryContainer = ink,
+        secondary = accent, onSecondary = Color.White, secondaryContainer = container, onSecondaryContainer = ink,
+        tertiary = accent, onTertiary = Color.White, tertiaryContainer = container, onTertiaryContainer = ink,
+        background = paper, onBackground = ink, surface = paper, onSurface = ink,
+        surfaceTint = accent, surfaceBright = paper, surfaceDim = tone(.88f, saturation * .2f),
+        surfaceContainerLowest = tone(.99f, saturation * .2f), surfaceContainerLow = tone(.95f, saturation * .2f),
+        surfaceContainer = tone(.93f, saturation * .2f), surfaceContainerHigh = tone(.91f, saturation * .2f),
+        surfaceContainerHighest = tone(.89f, saturation * .2f), surfaceVariant = tone(.91f, saturation * .2f),
+        onSurfaceVariant = tone(.3f, saturation * .2f), outline = tone(.46f, saturation * .2f),
+        outlineVariant = tone(.8f, saturation * .2f), inverseSurface = ink, inverseOnSurface = paper, inversePrimary = container,
+        error = Clay, errorContainer = Color(0xFFF6E1D6), onError = Color.White, onErrorContainer = Color(0xFF381508),
+    )
 }

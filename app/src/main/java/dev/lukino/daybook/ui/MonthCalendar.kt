@@ -85,8 +85,8 @@ private fun pageMonth(page: Int): YearMonth = YearMonth.of(page / 12 + 1, page %
                             .semantics { contentDescription = "$date，${items.size} 条记录${if (date == today) "，今天" else ""}${note?.description?.takeIf { it.isNotEmpty() }?.let { "，$it" }.orEmpty()}" })
                         .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (date != null) {
-                            Box(Modifier.size(30.dp).clip(CircleShape).background(if (date == today) Green else Color.Transparent), contentAlignment = Alignment.Center) {
-                                Text(date.dayOfMonth.toString(), fontSize = 16.sp, color = if (date == today) Color.White else Ink, fontWeight = if (date == selected) FontWeight.Bold else FontWeight.Normal)
+                            Box(Modifier.size(30.dp).clip(CircleShape).background(if (date == today) MaterialTheme.colorScheme.primary else Color.Transparent), contentAlignment = Alignment.Center) {
+                                Text(date.dayOfMonth.toString(), fontSize = 16.sp, color = if (date == today) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = if (date == selected) FontWeight.Bold else FontWeight.Normal)
                             }
                             Text(note?.festivals.orEmpty().joinToString("/"),
                                 fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,

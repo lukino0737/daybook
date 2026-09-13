@@ -148,3 +148,13 @@
 - 39 项 JVM 单测、Debug/测试 APK 构建、Lint 通过。7 项专项通过：便签 UI、真实通知跳转及重建、快照恢复/故障回滚、发送与编辑状态、两条历史迁移路径、既有备份服务。日志 work/v04/c-*.log。
 - 新测试编译时曾缺少通知文案的空值判断，修正后重新构建并执行；旧测试 APK 上的两项类缺失失败不计为产品失败或通过证据。
 - 尚未完成 D 背景主题、最终大字体/外观检查和正式同签名 v0.4.0 交付。
+
+
+## v0.4 D 自选背景与本地配色（2026-09-13）
+
+- 外观设置使用系统选图合同，旧系统自动回退文件选择；选图后预览再应用，可恢复默认。照片生成应用私有副本，不要求整个相册权限，不增加联网或云端服务。
+- 限制输入体积与解码尺寸，处理照片方向、透明图片底色；本地直方图选取代表色并生成可读主题。四主页共享背景，编辑/设置使用清晰底色，日历语义标记与错误色不变。外观不进 JSON 记录备份。
+- 使用原子配置文件，预览不改变已应用外观；图片失败、配置写入失败保留原设置，重启可恢复，取消/替换清理无用副本。未新增库或更改提醒和数据库方案。
+- Debug/测试包构建、39 项 JVM 单测及 Lint（0 错误）通过。4 项外观仪器测试通过，包含独立副本、取消/重启/恢复默认/失败保护、旋转照片和旧解码路径、极端图片配色对比度。
+- 四主页、便签输入/提醒/返回、外观预览应用的正常字体 1 项和 150% 字体 2 项专项通过；截图只含虚构记录，已目视检查。日志 work/v04/d-*.log；预览 work/v04/previews。正式 Release 同签名升级和系统选图端到端待交付阶段核对。
+- 参考：Android 官方 [Photo picker](https://developer.android.com/training/data-storage/shared/photo-picker)、[ImageDecoder](https://developer.android.com/reference/android/graphics/ImageDecoder) 与 [ExifInterface](https://developer.android.com/reference/android/media/ExifInterface)。

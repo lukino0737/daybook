@@ -54,6 +54,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     val pending by vm.pendingRestore.collectAsStateWithLifecycle()
     val restoringSnapshot by vm.restoringSnapshot.collectAsStateWithLifecycle()
     val historyVersion by vm.historyVersion.collectAsStateWithLifecycle()
+    var appearanceSettings by rememberSaveable { mutableStateOf(false) }
     var reminderSettings by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
@@ -85,7 +86,10 @@ import androidx.compose.material.icons.outlined.MoreVert
         "tasks" -> entries.filter { it.kind == EntryKind.TASK && !it.completed }.sortedWith(compareBy<Entry> { it.date ?: "9999-12-31" }.thenBy { it.time ?: "24:00" })
         else -> EntryRules.forDay(entries, LocalDate.parse(selected))
     }
+    Box(Modifier.fillMaxSize()) {
+    AppearanceBackground(LocalAppearance.current)
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = { TopAppBar(title = { Column { Text("Daybook", style = MaterialTheme.typography.headlineSmall); Text("把日子，记在一起。", style = MaterialTheme.typography.labelMedium) } },
             actions = {
                 if (view == "day" && (selected != now.toLocalDate().toString() || month != YearMonth.from(now).toString())) {
@@ -97,8 +101,9 @@ import androidx.compose.material.icons.outlined.MoreVert
                     }
                 }
                 Box {
-                    IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "备份与恢复") }
+                    IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "设置与备份") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("外观设置") }, onClick = { menu = false; appearanceSettings = true })
                         DropdownMenuItem(text = { Text("提醒设置") }, onClick = { menu = false; reminderSettings = true })
                         DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.json") })
                         DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
@@ -135,11 +140,11 @@ import androidx.compose.material.icons.outlined.MoreVert
             }
             if (view != "memos" && (view != "review" || applied != null)) item {
                 Text(when (view) { "tasks" -> "任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge)
-                if (view == "day" && selectedNote.description.isNotEmpty()) Text(selectedNote.description, style = MaterialTheme.typography.labelMedium, color = Green)
+                if (view == "day" && selectedNote.description.isNotEmpty()) Text(selectedNote.description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             if (view != "memos" && visible.isEmpty() && (view != "review" || applied != null)) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Outlined.EditCalendar, null, tint = Green)
+                    Icon(Icons.Outlined.EditCalendar, null, tint = MaterialTheme.colorScheme.primary)
                     Text(if (view == "day") "这一天，留给你慢慢写。" else if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
                     Text(when (view) {
                         "tasks" -> "这里显示所有未完成任务，包括已设和未设截止日期的任务。"
@@ -172,6 +177,8 @@ import androidx.compose.material.icons.outlined.MoreVert
             } else items(visible, key = { it.id }) { entry -> EntryCard(entry, now, busy, { vm.edit(entry) }, { vm.toggle(entry) }, showDate = view != "day", onTag = vm::openTag) }
         }
     }
+    }
+    if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
     memoDraft?.let { MemoEditor(it, vm.memoEditor) }
     if (confirmAll) AlertDialog(onDismissRequest = vm::dismissReviewConfirmation,
         modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
@@ -199,7 +206,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     Card(onClick = onEdit, enabled = !busy, colors = CardDefaults.cardColors(containerColor = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerLow), modifier = Modifier.fillMaxWidth().testTag("entry-${entry.id}")) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (entry.kind == EntryKind.TASK) Checkbox(checked = entry.completed, onCheckedChange = { onToggle() }, enabled = !busy)
-            else Text(entry.kind.symbol, Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.headlineSmall, color = Green)
+            else Text(entry.kind.symbol, Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(entry.title, style = MaterialTheme.typography.titleMedium,
                     textDecoration = if (entry.completed) TextDecoration.LineThrough else null,

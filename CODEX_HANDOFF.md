@@ -11,7 +11,7 @@
 - 已完成：备份统一包含原记录和便签，读取 JSON 1–4；旧备份整体恢复会清空便签，确认页明确提示；快照含两张表，共享写锁与事务，失败回滚。导出数据来自一致快照。修改便签不能覆盖并发发送提醒的状态。原通知渠道及补发时限不改，提醒延迟长期排查继续搁置。
 - 已验证：Debug/测试 APK 构建、Lint（0 错误）、39 项 JVM 单测；A 回顾筛选 1 项；B 日历分页/真实记录 2 项及节假日 2 项（见下方失败说明）；C 7 项仪器专项全部执行通过，覆盖便签 UI、通知跳转及重建、快照恢复/失败回滚、编辑与发送并发状态、1→4/2→4 迁移、旧备份服务。
 - 已解决的失败：B 首次测试中 scrollToPage 在列表子布局触发测量重入，换为 requestScrollToPage 后相关 2 项复测通过。C 新通知测试缺少空值判断导致编译失败，曾误运行旧测试 APK 出现 2 项类缺失；修正并重新构建后的 7 项才是有效证据。不要重跑已通过专项以替代恢复。
-- 当前没有一半写入的迁移或构建。C 功能已验证并提交；**D 尚未开始，外观设置/自选背景/自动配色未实现**。最终 v0.4.0 的版本号调整、界面目视检查和大字体专项、正式 Release 构建与同签名升级确认、使用文档/截图/正式交付仍待完成。旧的 USAGE/README 主要描述已发布版本，需在交付阶段更新。
+- D 已实现外观设置、系统选图、本机副本与本地主题、四主页背景。4 项外观测试和正常/150% 字体专项通过，日志 work/v04/d-*.log；39 单测与 Lint 通过。剩余版本号、正式 Release 同签名升级、系统选图端到端、文档及交付。
 - 新关键文件：data/Memo.kt、DaybookDatabase.kt（MIGRATION_3_4 与 schema 4.json）、EntryRepository.kt；ui/MemoController.kt、MemoEditor.kt；reminder/ReminderTarget.kt、ReminderCoordinator.kt；backup/BackupCodec.kt、BackupService.kt。对应测试 MemoBackupTest、MemoStorageTest、MemoUiTest、MemoNotificationTest、MigrationTest、CalendarPagerTest。
 - 本轮证据：work/v04/a-build.log、a-device.log、b-build.log、b-device.log、b-retest.log、c-data-build.log、c-build.log、c-ui-build.log、c-device.log。work/v04/build.sh 封装原有本机工具路径。work/startup-qa/install_test.py 已复用于同签名安装，目录中的 app.apk/tests.apk 是本轮 QA 包（版本号仍 0.3.0），不是可交付的新正式版。
 - 专用 Daybook_API_35 已关闭，保留同签名 QA 安装和数据库，不要卸载或清库。自动测试只创建自己的虚构便签并清理。outputs/ 原 v0.3.0 APK、归档、校验文件及发布标签都未变化。
