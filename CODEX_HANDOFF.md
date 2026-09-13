@@ -2,9 +2,21 @@
 
 更新：2026-09-11。本次按用户确认新增首次通知授权、可跳过提醒设置引导及多品牌后台设置说明；只做相关专项，未重跑完整 QA。新对话请以当前文件和 Git 实际状态为准。
 
-## 本轮实施状态（2026-09-13）
+## 当前恢复入口 2026-09-13 已恢复
 
-用户已批准 docs/V0.4-PLAN.md 并要求开始实施。本轮从 7cb9f25 开始。A/B 已提交 8ec8e4c；C 独立便签、Room/JSON 4 和对应验证已完成，待阶段提交。D 背景主题与正式交付尚未开始。已有 39 项 JVM 测试、C 的 7 项专项通过，详情 docs/DEVELOPMENT.md 与 work/v04/c-*.log。当前版本号仍 0.3.0，发布附件未变化。按 A 小调整→B 月历动画→C 独立便签与备份→D 背景主题与交付推进。提醒延迟排查暂缓；下面历史交接中尚未批准的便签/背景描述已被本轮方案取代。
+**当前目标是完成已批准的 v0.4.0，不是重新讨论方案。** 用户已同意 docs/V0.4-PLAN.md 全部推荐方案并要求实施。上轮因额度不足安全暂停，本轮额度恢复后继续 D 背景主题阶段。C 的 GitHub CI 34751845966 已核对成功。下面的 2026-09-11 交接是历史记录；便签、背景、底部入口及 schema/JSON 的旧约定以本节和 V0.4-PLAN 为准。
+
+- 起点 7cb9f25；A/B 稳定提交 `8ec8e4c`（日历跟手分页、单行年月、时间文案、筛选重置）；C 稳定提交 `cfaec74`（独立便签、Room 4、JSON 4、提醒与备份）。均已推送 main，cfaec74 的远程 SHA 已核对一致。之后的提交仅记录收尾，以 git log 为准。
+- 已完成：底部日历/任务/便签/回顾四入口；便签独立 memos 表，不是第四种 EntryKind，不进原日历/任务/回顾；无强制标题、首行摘要、默认无日期、可选日期与独立提醒、正文自动保存和返回保存、错误提示、编辑删除、按修改时间排序、通知直达。空白新便签不保留；已有便签清空正文时需明确删除。
+- 已完成：备份统一包含原记录和便签，读取 JSON 1–4；旧备份整体恢复会清空便签，确认页明确提示；快照含两张表，共享写锁与事务，失败回滚。导出数据来自一致快照。修改便签不能覆盖并发发送提醒的状态。原通知渠道及补发时限不改，提醒延迟长期排查继续搁置。
+- 已验证：Debug/测试 APK 构建、Lint（0 错误）、39 项 JVM 单测；A 回顾筛选 1 项；B 日历分页/真实记录 2 项及节假日 2 项（见下方失败说明）；C 7 项仪器专项全部执行通过，覆盖便签 UI、通知跳转及重建、快照恢复/失败回滚、编辑与发送并发状态、1→4/2→4 迁移、旧备份服务。
+- 已解决的失败：B 首次测试中 scrollToPage 在列表子布局触发测量重入，换为 requestScrollToPage 后相关 2 项复测通过。C 新通知测试缺少空值判断导致编译失败，曾误运行旧测试 APK 出现 2 项类缺失；修正并重新构建后的 7 项才是有效证据。不要重跑已通过专项以替代恢复。
+- 当前没有一半写入的迁移或构建。C 功能已验证并提交；**D 尚未开始，外观设置/自选背景/自动配色未实现**。最终 v0.4.0 的版本号调整、界面目视检查和大字体专项、正式 Release 构建与同签名升级确认、使用文档/截图/正式交付仍待完成。旧的 USAGE/README 主要描述已发布版本，需在交付阶段更新。
+- 新关键文件：data/Memo.kt、DaybookDatabase.kt（MIGRATION_3_4 与 schema 4.json）、EntryRepository.kt；ui/MemoController.kt、MemoEditor.kt；reminder/ReminderTarget.kt、ReminderCoordinator.kt；backup/BackupCodec.kt、BackupService.kt。对应测试 MemoBackupTest、MemoStorageTest、MemoUiTest、MemoNotificationTest、MigrationTest、CalendarPagerTest。
+- 本轮证据：work/v04/a-build.log、a-device.log、b-build.log、b-device.log、b-retest.log、c-data-build.log、c-build.log、c-ui-build.log、c-device.log。work/v04/build.sh 封装原有本机工具路径。work/startup-qa/install_test.py 已复用于同签名安装，目录中的 app.apk/tests.apk 是本轮 QA 包（版本号仍 0.3.0），不是可交付的新正式版。
+- 专用 Daybook_API_35 已关闭，保留同签名 QA 安装和数据库，不要卸载或清库。自动测试只创建自己的虚构便签并清理。outputs/ 原 v0.3.0 APK、归档、校验文件及发布标签都未变化。
+- 下一步：先读本节、V0.4-PLAN、git status 和必要日志，核对额度及 cfaec74 的 CI；复用 A/B/C，从 D 开始。D 方案已批准：系统选图及低版本回退、本机保存图片副本、本地提取主题色、预览后应用/恢复默认，四个主页统一背景，编辑/设置保留清晰底色；语义标记色保持独立，外观不纳入 JSON，首版无手动调色。不需要重新请求宏观方案确认。
+- 权限：本轮项目目录写权限经工具授予，但 Git 索引另需 exec 升级；后续会话不要假设权限继承。已有本地签名可复用，不输出密钥内容。
 
 ## 1. 当前目标与状态
 
