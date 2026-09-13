@@ -158,3 +158,12 @@
 - Debug/测试包构建、39 项 JVM 单测及 Lint（0 错误）通过。4 项外观仪器测试通过，包含独立副本、取消/重启/恢复默认/失败保护、旋转照片和旧解码路径、极端图片配色对比度。
 - 四主页、便签输入/提醒/返回、外观预览应用的正常字体 1 项和 150% 字体 2 项专项通过；截图只含虚构记录，已目视检查。日志 work/v04/d-*.log；预览 work/v04/previews。正式 Release 同签名升级和系统选图端到端待交付阶段核对。
 - 参考：Android 官方 [Photo picker](https://developer.android.com/training/data-storage/shared/photo-picker)、[ImageDecoder](https://developer.android.com/reference/android/graphics/ImageDecoder) 与 [ExifInterface](https://developer.android.com/reference/android/media/ExifInterface)。
+
+
+## v0.4 正式交付验收（2026-09-13）
+
+- versionCode 4 / versionName 0.4.0，Release 构建通过；签名证书与已发布 v0.3.0 相同。
+- 使用独立 AVD 目录完成真实 v0.3.0 → v0.4.0 覆盖升级，记录全部字段和旧通知渠道保留；正式包启动及便签通知直达/编辑重建通过。原 QA 模拟器的数据和安装保留。
+- 补验 150% 字体加软键盘下便签输入、滚动提醒开关和返回保存，通过。README/使用说明/备份边界及虚构样例截图同步更新。
+- D 阶段 fd36ad0 的 CI 34761242134 成功。未重复完整 QA，旧提醒异常长期复现与跨品牌真机试用仍待用户反馈。
+- 正式包系统选图端到端通过：选取虚构图片、预览、应用、重启保留、恢复默认；截图 work/v04/release-picker-*.png。
