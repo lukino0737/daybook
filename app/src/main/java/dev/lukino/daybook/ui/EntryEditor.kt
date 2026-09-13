@@ -71,7 +71,7 @@ import java.time.format.DateTimeFormatter
                         OutlinedButton(enabled = !busy && draft.date != null, onClick = {
                             val t = draft.time?.let(LocalTime::parse) ?: LocalTime.of(9, 0)
                             TimePickerDialog(context, { _, h, m -> onChange(draft.copy(time = LocalTime.of(h, m).format(DateTimeFormatter.ofPattern("HH:mm")))) }, t.hour, t.minute, true).show()
-                        }) { Text(draft.time ?: "时间未定") }
+                        }) { Text(draft.time ?: "具体时间未定") }
                         if (draft.time != null) TextButton(enabled = !busy, onClick = { onChange(draft.copy(time = null)) }) { Text("清除时间") }
                     }
                     if (draft.kind == EntryKind.TASK) Text("只设日期时，当天结束后才算逾期。这里记录的是截止时间。", style = MaterialTheme.typography.bodySmall)

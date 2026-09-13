@@ -62,6 +62,16 @@ class ReviewUiTest {
             compose.onNodeWithTag("review-query").performTextReplacement("找不到的正文")
             compose.onNodeWithTag("apply-review").performScrollTo().performClick()
             compose.onNodeWithText("回顾 · 0 条").assertExists()
+            compose.onNodeWithTag("reset-review").performScrollTo().performClick()
+            compose.onNodeWithTag("review-query").assertTextEquals("搜索标题和正文", "")
+            compose.onNodeWithText("回顾 · 0 条").assertDoesNotExist()
+            compose.runOnIdle {
+                assertTrue(vm.reviewSelection.value.isUnrestricted())
+                assertNull(vm.appliedReview.value)
+                assertNull(vm.reviewError.value)
+                assertFalse(vm.confirmAllReview.value)
+            }
+            assertEquals(3, runBlocking { repo.all().size })
         } finally { store.clear(); db.close() }
     }
 }

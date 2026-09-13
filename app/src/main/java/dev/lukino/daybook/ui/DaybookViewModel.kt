@@ -69,6 +69,10 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         saved["review-applied"] = Json.encodeToString(selection)
         saved["review-confirm-all"] = false
     }
+    fun resetReview() {
+        setReview(ReviewSelection())
+        saved["review-applied"] = null
+    }
     fun dismissReviewConfirmation() { saved["review-confirm-all"] = false }
     fun openTag(value: String) { setReview(ReviewSelection(tag = value)); saved["review-applied"] = null; setView("review") }
     init { if (saved.get<String>("view") == "undated") saved["view"] = "tasks" }

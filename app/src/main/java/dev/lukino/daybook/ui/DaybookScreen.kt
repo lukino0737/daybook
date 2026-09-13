@@ -115,7 +115,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("calendar-list"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (busy && draft == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             if (view == "review") item {
-                ReviewFilters(selection, knownTags, reviewError, vm::setReview, { vm.applyReview() })
+                ReviewFilters(selection, knownTags, reviewError, vm::setReview, { vm.applyReview() }, vm::resetReview)
             }
             if (view == "day") {
                 item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
@@ -188,7 +188,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                 Text(buildString {
                     append(entry.kind.label)
                     if (showDate) append(" · ${entry.date ?: "未设截止日期"}")
-                    append(" · ${entry.time ?: if (entry.kind == EntryKind.TASK && entry.date == null) "未安排" else "时间未定"}")
+                    append(" · ${entry.time ?: if (entry.kind == EntryKind.TASK && entry.date == null) "未安排" else "具体时间未定"}")
                     if (overdue) append(" · 已逾期")
                     if (entry.completed) append(" · 已完成")
                 }, style = MaterialTheme.typography.labelMedium, color = if (overdue) Clay else MaterialTheme.colorScheme.onSurfaceVariant)

@@ -2,7 +2,8 @@ package dev.lukino.daybook.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.animation.animateContentSize
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,8 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -39,23 +38,37 @@ fun relativeDayLabel(selected: LocalDate, today: LocalDate): String? {
 }
 
 @Composable fun MonthCalendar(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onMonth: (YearMonth) -> Unit, onSelect: (LocalDate) -> Unit) {
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = monthPage(month), pageCount = { 9999 * 12 })
+    val onMonthChanged by rememberUpdatedState(onMonth)
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(month) {
+        val target = monthPage(month)
+        if (pager.settledPage != target) pager.requestScrollToPage(target)
+    }
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect { page -> onMonthChanged(pageMonth(page)) }
+    }
+    androidx.compose.foundation.pager.HorizontalPager(state = pager,
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.fillMaxWidth().animateContentSize().testTag("month-calendar").semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("上个月") { scope.launch { pager.animateScrollToPage((pager.settledPage - 1).coerceAtLeast(0)) }; true },
+                CustomAccessibilityAction("下个月") { scope.launch { pager.animateScrollToPage((pager.settledPage + 1).coerceAtMost(pager.pageCount - 1)) }; true })
+        }) { page ->
+        MonthGrid(pageMonth(page), selected, today, entries, onSelect)
+    }
+}
+
+private fun monthPage(month: YearMonth) = (month.year - 1) * 12 + month.monthValue - 1
+private fun pageMonth(page: Int): YearMonth = YearMonth.of(page / 12 + 1, page % 12 + 1)
+
+@Composable private fun MonthGrid(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onSelect: (LocalDate) -> Unit) {
     val groups = remember(entries) { entries.groupBy { it.date } }
     val notes = remember(month) { monthCells(month).filterNotNull().associateWith(FestivalCalendar::forDate) }
-    val threshold = with(LocalDensity.current) { 48.dp.toPx() }
-    Column(Modifier.testTag("month-calendar").pointerInput(month, threshold) {
-        var distance = 0f
-        detectHorizontalDragGestures(onDragStart = { distance = 0f }, onDragCancel = { distance = 0f },
-            onDragEnd = {
-                if (distance > threshold) onMonth(month.minusMonths(1))
-                else if (distance < -threshold) onMonth(month.plusMonths(1))
-            }) { change, delta -> change.consume(); distance += delta }
-    }.semantics {
-        customActions = listOf(CustomAccessibilityAction("上个月") { onMonth(month.minusMonths(1)); true },
-            CustomAccessibilityAction("下个月") { onMonth(month.plusMonths(1)); true })
-    }) {
-        Text("${month.year} 年", style = MaterialTheme.typography.labelLarge, color = Green)
-        Text("${month.monthValue} 月", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
-        Row(Modifier.padding(vertical = 12.dp)) {
+    Column(Modifier.fillMaxWidth()) {
+        Text("${month.year}年${month.monthValue}月", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("month-title"))
+        Row(Modifier.padding(vertical = 8.dp)) {
             listOf("一", "二", "三", "四", "五", "六", "日").forEach { day ->
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Text(day, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }

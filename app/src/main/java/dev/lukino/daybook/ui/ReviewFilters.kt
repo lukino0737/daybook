@@ -15,7 +15,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun ReviewFilters(selection: ReviewSelection, tags: List<String>, error: String?,
-    onChange: (ReviewSelection) -> Unit, onApply: () -> Unit) {
+    onChange: (ReviewSelection) -> Unit, onApply: () -> Unit, onReset: () -> Unit) {
     val context = LocalContext.current
     fun pick(initial: String?, update: (String) -> Unit) {
         val date = initial?.let(LocalDate::parse) ?: LocalDate.now()
@@ -46,7 +46,10 @@ import java.time.LocalDate
             OutlinedButton(onClick = { pick(selection.end) { onChange(selection.copy(end = it)) } }) { Text(selection.end) }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(onClick = onApply, modifier = Modifier.testTag("apply-review")) { Text("筛选") }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onApply, modifier = Modifier.testTag("apply-review")) { Text("筛选") }
+            TextButton(onClick = onReset, modifier = Modifier.testTag("reset-review")) { Text("重置筛选") }
+        }
     }
 }
 
