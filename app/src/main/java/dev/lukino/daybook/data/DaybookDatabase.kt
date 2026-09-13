@@ -19,11 +19,28 @@ interface EntryDao {
     @Query("DELETE FROM entries") suspend fun clear()
 }
 
-@Database(entities = [Entry::class], version = 3, exportSchema = true)
+@Dao
+interface MemoDao {
+    @Query("SELECT * FROM memos ORDER BY updatedAt DESC, id") fun observeAll(): Flow<List<Memo>>
+    @Query("SELECT * FROM memos ORDER BY updatedAt DESC, id") suspend fun all(): List<Memo>
+    @Query("SELECT * FROM memos WHERE id = :id") suspend fun get(id: String): Memo?
+    @Upsert suspend fun save(memo: Memo)
+    @Insert suspend fun insertAll(memos: List<Memo>)
+    @Query("DELETE FROM memos WHERE id = :id") suspend fun delete(id: String)
+    @Query("DELETE FROM memos") suspend fun clear()
+}
+
+@Database(entities = [Entry::class, Memo::class], version = 4, exportSchema = true)
 @TypeConverters(EntryConverters::class)
 abstract class DaybookDatabase : RoomDatabase() {
     abstract fun entries(): EntryDao
+    abstract fun memos(): MemoDao
     companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS memos (id TEXT NOT NULL, body TEXT NOT NULL, date TEXT, reminderAt TEXT, reminderDeliveredFor TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(id))")
+            }
+        }
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE entries ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")

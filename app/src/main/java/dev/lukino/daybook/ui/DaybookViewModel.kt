@@ -45,6 +45,7 @@ sealed interface UiNotice {
 }
 
 class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle, private val backup: BackupService) : ViewModel() {
+    val memoEditor = MemoController(repository, saved, viewModelScope)
     val entries = repository.entries.catch { failure.value = "读取失败，请重新打开应用：${it.localizedMessage}" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val selected = saved.getStateFlow("selected", LocalDate.now().toString())
@@ -111,6 +112,15 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
             } catch (_: Exception) { failure.value = "暂时无法打开记录，请重试" }
         }
     }
+    fun openMemo(id: String) {
+        viewModelScope.launch {
+            try {
+                val memo = repository.allMemos().firstOrNull { it.id == id }
+                if (memo == null) channel.send(UiNotice.Message("这条便签已删除"))
+                else { saved["view"] = "memos"; memoEditor.open(memo) }
+            } catch (_: Exception) { failure.value = "暂时无法打开便签，请重试" }
+        }
+    }
     fun setDraft(value: Draft) { saved["draft"] = Json.encodeToString(value) }
     fun dismissDraft() { if (!busy.value) { saved["draft"] = null; failure.value = null } }
     fun clearError() { failure.value = null }
@@ -155,7 +165,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         pendingRestore.value = null
         // Old undo notices must not reintroduce entries from a replaced database.
         historyVersion.value += 1
-        channel.send(UiNotice.Message("已恢复 ${archive.entries.size} 条记录"))
+        channel.send(UiNotice.Message("已恢复 ${archive.entries.size} 条记录、${archive.memos.size} 条便签"))
     }
     val historyVersion = MutableStateFlow(0)
 

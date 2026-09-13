@@ -19,7 +19,9 @@ class MainActivity : ComponentActivity() {
     }
     private fun openNotification(intent: android.content.Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme == "daybook" && uri.host == "entry") uri.lastPathSegment?.let(model::openEntry)
+        if (uri.scheme == "daybook") uri.lastPathSegment?.let { id ->
+            when (uri.host) { "entry" -> model.openEntry(id); "memo" -> model.openMemo(id) }
+        }
     }
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)

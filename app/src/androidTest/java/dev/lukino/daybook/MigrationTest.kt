@@ -20,7 +20,7 @@ class MigrationTest {
                 execSQL("INSERT INTO entries VALUES ('00000000-0000-0000-0000-000000000103','TASK','已提醒','正文',NULL,NULL,0,10,20,'2026-09-10T09:00','2026-09-10T09:00')")
                 close()
             }
-            helper.runMigrationsAndValidate(name, 3, true, DaybookDatabase.MIGRATION_2_3).close()
+            helper.runMigrationsAndValidate(name, 4, true, DaybookDatabase.MIGRATION_2_3, DaybookDatabase.MIGRATION_3_4).close()
             val db = Room.databaseBuilder(context, DaybookDatabase::class.java, name).build()
             try {
                 val entry = EntryRepository(db).all().single()
@@ -39,7 +39,7 @@ class MigrationTest {
                 execSQL("INSERT INTO entries VALUES ('00000000-0000-0000-0000-000000000102','TASK','历史记录','保留正文','2028-02-29','23:59',1,10,20)")
                 close()
             }
-            helper.runMigrationsAndValidate(name, 3, true, DaybookDatabase.MIGRATION_1_2, DaybookDatabase.MIGRATION_2_3).close()
+            helper.runMigrationsAndValidate(name, 4, true, DaybookDatabase.MIGRATION_1_2, DaybookDatabase.MIGRATION_2_3, DaybookDatabase.MIGRATION_3_4).close()
             val db = Room.databaseBuilder(context, DaybookDatabase::class.java, name).addMigrations(DaybookDatabase.MIGRATION_1_2, DaybookDatabase.MIGRATION_2_3).build()
             try {
                 val repository = EntryRepository(db)
