@@ -18,7 +18,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /** Local appearance is deliberately separate from the user's record backup. */
-data class Appearance(val file: File, val bitmap: Bitmap, val seed: Int)
+data class Appearance(val file: File?, val bitmap: Bitmap?, val seed: Int, val customColor: Boolean = false)
 data class AppearanceState(
     val current: Appearance? = null, val preview: Appearance? = null,
     val busy: Boolean = true, val error: String? = null,
@@ -39,7 +39,9 @@ class AppearanceStore(private val context: Context, private val directory: File 
                 require(name.matches(Regex("[a-f0-9-]+\\.jpg")))
                 val file = File(directory, name)
                 val bitmap = BitmapFactory.decodeFile(file.path) ?: error("背景图片不可用，请重新选择。")
-                mutable.value = mutable.value.copy(current = Appearance(file, bitmap, json.getInt("seed")))
+                mutable.value = mutable.value.copy(current = Appearance(file, bitmap, json.getInt("seed"), json.optBoolean("customColor")))
+            } else if (json.has("seed")) {
+                mutable.value = mutable.value.copy(current = Appearance(null, null, json.getInt("seed"), true))
             }
         }
         cleanup()
@@ -76,7 +78,8 @@ class AppearanceStore(private val context: Context, private val directory: File 
                 check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)) { "图片保存失败，请重试。" }
                 stream.fd.sync()
             }
-            val preview = Appearance(output, bitmap, ImageColors.seed(bitmap))
+            val previous = mutable.value.preview ?: mutable.value.current
+            val preview = Appearance(output, bitmap, if (previous?.customColor == true) previous.seed else ImageColors.seed(bitmap), previous?.customColor == true)
             mutable.value = mutable.value.copy(preview = preview)
             cleanup()
         } catch (e: Exception) {
@@ -85,9 +88,20 @@ class AppearanceStore(private val context: Context, private val directory: File 
         } finally { input.delete() }
     }
 
+    fun setColor(seed: Int): Job = scope.launch { mutex.withLock {
+        val previous = mutable.value.preview ?: mutable.value.current
+        mutable.value = mutable.value.copy(preview = Appearance(previous?.file, previous?.bitmap, seed or 0xFF000000.toInt(), true))
+    } }
+
+    fun followImage(): Job = operation {
+        val previous = mutable.value.preview ?: mutable.value.current ?: return@operation
+        val bitmap = previous.bitmap ?: return@operation
+        mutable.value = mutable.value.copy(preview = previous.copy(seed = ImageColors.seed(bitmap), customColor = false))
+    }
+
     fun apply(): Job = operation {
         val value = mutable.value.preview ?: return@operation
-        writeConfig(JSONObject().put("image", value.file.name).put("seed", value.seed))
+        writeConfig(JSONObject().put("image", value.file?.name).put("seed", value.seed).put("customColor", value.customColor))
         mutable.value = mutable.value.copy(current = value, preview = null)
         cleanup()
     }

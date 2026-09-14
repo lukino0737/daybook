@@ -9,8 +9,8 @@ val Ink = Color(0xFF27392F)
 val Green = Color(0xFF466553)
 val Clay = Color(0xFFA34D34)
 
-@Composable fun DaybookTheme(seed: Int? = null, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = seed?.let(::imageColorScheme) ?: lightColorScheme(
+@Composable fun DaybookTheme(seed: Int? = null, custom: Boolean = false, content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = seed?.let { imageColorScheme(it, custom) } ?: lightColorScheme(
         primary = Green, onPrimary = Color.White,
         primaryContainer = Color(0xFFE3EADD), onPrimaryContainer = Ink,
         secondary = Green, secondaryContainer = Color(0xFFE3EADD), onSecondaryContainer = Ink,
@@ -22,12 +22,12 @@ val Clay = Color(0xFFA34D34)
     ), content = content)
 }
 
-fun imageColorScheme(seed: Int): ColorScheme {
+fun imageColorScheme(seed: Int, custom: Boolean = false): ColorScheme {
     val hsl = FloatArray(3)
     androidx.core.graphics.ColorUtils.colorToHSL(seed, hsl)
     val saturation = hsl[1].coerceAtMost(.55f)
     fun tone(light: Float, chroma: Float = saturation) = Color(androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf(hsl[0], chroma, light)))
-    var light = .32f
+    var light = if (custom) hsl[2].coerceIn(.08f, .45f) else .32f
     while (androidx.core.graphics.ColorUtils.calculateContrast(
             androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, light)), android.graphics.Color.WHITE) < 9.0) light -= .01f
     val accent = tone(light)

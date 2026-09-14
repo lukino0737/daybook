@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance by (application as DaybookApplication).appearance.state.collectAsStateWithLifecycle()
             CompositionLocalProvider(LocalAppearance provides appearance.current) {
-            DaybookTheme(appearance.current?.seed) {
+            DaybookTheme(appearance.current?.seed, appearance.current?.customColor == true) {
                 DaybookScreen(model)
                 StartupReminderSetup()
             }

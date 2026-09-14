@@ -30,12 +30,12 @@ class AppearanceTest {
             store.select(Uri.fromFile(source)).join()
             assertNull(store.state.value.error)
             assertNull(store.state.value.current)
-            val staged = store.state.value.preview!!.file
+            val staged = store.state.value.preview!!.file!!
             store.cancel().join(); assertFalse(staged.exists())
             store.select(Uri.fromFile(source)).join(); store.apply().join()
             val current = store.state.value.current!!
             source.delete()
-            assertTrue(current.file.exists())
+            assertTrue(current.file!!.exists())
             val restarted = AppearanceStore(context, directory)
             restarted.initialized.join()
             assertEquals(current.file, restarted.state.value.current!!.file)
@@ -50,14 +50,63 @@ class AppearanceTest {
             restarted.reset().join()
             assertNotNull(restarted.state.value.error)
             assertEquals(current.file, restarted.state.value.current!!.file)
-            assertTrue(current.file.exists())
+            assertTrue(current.file!!.exists())
             File(directory, "current.json.new").deleteRecursively()
             restarted.reset().join()
             assertNull(restarted.state.value.current)
             val reset = AppearanceStore(context, directory)
             reset.initialized.join()
             assertNull(reset.state.value.current)
-            assertFalse(current.file.exists())
+            assertFalse(current.file!!.exists())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun customColorWithoutImagePersistsAndLegacyImageCanSwitchModes() = runBlocking {
+        val root = File(context.cacheDir, "appearance-color-${UUID.randomUUID()}").apply { mkdirs() }
+        val directory = File(root, "private")
+        val source = File(root, "source.png")
+        try {
+            val store = AppearanceStore(context, directory)
+            store.initialized.join()
+            store.setColor(Color.RED).join()
+            assertNull(store.state.value.current)
+            store.cancel().join()
+            assertNull(store.state.value.preview)
+            store.setColor(Color.BLUE).join(); store.apply().join()
+            val restarted = AppearanceStore(context, directory)
+            restarted.initialized.join()
+            assertEquals(Color.BLUE, restarted.state.value.current!!.seed)
+            assertNull(restarted.state.value.current!!.bitmap)
+            assertTrue(restarted.state.value.current!!.customColor)
+            Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }.let { bitmap ->
+                source.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }; bitmap.recycle()
+            }
+            restarted.select(Uri.fromFile(source)).join()
+            assertEquals(Color.BLUE, restarted.state.value.preview!!.seed)
+            restarted.followImage().join()
+            assertFalse(restarted.state.value.preview!!.customColor)
+            restarted.apply().join()
+            val image = restarted.state.value.current!!
+            // v0.4 JSON has no color mode field.
+            File(directory, "current.json").writeText(org.json.JSONObject().put("image", image.file!!.name).put("seed", image.seed).toString())
+            val legacy = AppearanceStore(context, directory)
+            legacy.initialized.join()
+            assertFalse(legacy.state.value.current!!.customColor)
+            legacy.setColor(Color.MAGENTA).join()
+            File(directory, "current.json.new/block").apply { parentFile!!.mkdirs(); writeText("fixture") }
+            legacy.apply().join()
+            assertNotNull(legacy.state.value.error)
+            assertEquals(image.seed, legacy.state.value.current!!.seed)
+            assertTrue(image.file.exists())
+            File(directory, "current.json.new").deleteRecursively()
+            legacy.apply().join()
+            val custom = AppearanceStore(context, directory)
+            custom.initialized.join()
+            assertTrue(custom.state.value.current!!.customColor)
+            assertEquals(Color.MAGENTA, custom.state.value.current!!.seed)
+            assertEquals(image.file, custom.state.value.current!!.file)
+            custom.reset().join()
+            assertNull(custom.state.value.current)
         } finally { root.deleteRecursively() }
     }
 
@@ -74,6 +123,15 @@ class AppearanceTest {
                 it.recycle()
             }
         } finally { file.delete() }
+    }
+
+    @Test fun customColorsRemainReadableAndBrightnessAffectsTheme() {
+        for (seed in listOf(Color.BLACK, Color.WHITE, Color.GRAY, Color.RED, Color.YELLOW, Color.BLUE, Color.CYAN)) {
+            val scheme = imageColorScheme(seed, true)
+            assertTrue(ColorUtils.calculateContrast(scheme.onPrimary.toArgb(), scheme.primary.toArgb()) >= 9.0)
+            assertTrue(ColorUtils.calculateContrast(scheme.onSurface.toArgb(), scheme.surface.toArgb()) >= 7.0)
+        }
+        assertNotEquals(imageColorScheme(0xFF101080.toInt(), true).primary, imageColorScheme(0xFF080820.toInt(), true).primary)
     }
 
     @Test fun darkLightGrayAndSaturatedPhotosProduceLegibleRoles() {

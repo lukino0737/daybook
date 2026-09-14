@@ -19,6 +19,32 @@ import java.util.UUID
 
 class AppearanceUiTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun paletteWithoutBackgroundPreviewsCancelsAndPersists() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val root = File(context.cacheDir, "palette-ui-${UUID.randomUUID()}").apply { mkdirs() }
+        val store = AppearanceStore(context, root)
+        var open by mutableStateOf(true)
+        try {
+            runBlocking { store.initialized.join() }
+            compose.setContent { DaybookTheme { if (open) AppearanceSettingsScreen(store) { open = false } } }
+            compose.onNodeWithText("四个主页使用同一背景", substring = true).assertDoesNotExist()
+            compose.onNodeWithTag("preset-海蓝").performScrollTo().performClick()
+            compose.waitUntil(5000) { store.state.value.preview?.customColor == true }
+            assertNull(store.state.value.current)
+            compose.onNodeWithTag("color-brightness").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(.25f) }
+            compose.waitUntil(5000) { (store.state.value.preview!!.seed and 0xFF) < 100 }
+            compose.onNodeWithContentDescription("返回").performClick()
+            compose.waitUntil(5000) { !open && store.state.value.preview == null }
+            assertNull(store.state.value.current)
+            compose.runOnIdle { open = true }
+            compose.onNodeWithTag("preset-玫红").performScrollTo().performClick()
+            compose.onNodeWithTag("apply-appearance").performScrollTo().performClick()
+            compose.waitUntil(5000) { !open && store.state.value.current != null }
+            assertEquals(0xFFB83F78.toInt(), store.state.value.current!!.seed)
+            assertNull(store.state.value.current!!.bitmap)
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun previewRequiresApplyAndDefaultCanBeRestored() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val root = File(context.cacheDir, "appearance-ui-${UUID.randomUUID()}").apply { mkdirs() }
