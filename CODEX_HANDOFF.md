@@ -1,24 +1,15 @@
 # Daybook 项目交接
 
-更新：2026-09-14。当前开发版本 v0.5.0-dev，里程碑一为相册权限/应用内选图与完整调色盘。
+更新：2026-09-14。本次仅整理交接，低成本核对了 Git、版本配置、已有构建/测试/CI 日志与输出文件，未重建、重跑 QA 或启动新开发。当前开发版本 v0.5.0-dev，正式发布仍为 v0.4.0。
 
 **v0.5 里程碑一已完成，代码提交 329c64e 已推送 main，GitHub CI 34822871560 成功。现在等待用户下一步需求，不自动开始后续里程碑。用户只授权本里程碑提交推送，不发布最终安装包、不创建 Release。** v0.4.0 已发布并收尾，复用成果，不重做发布。既有提醒异常继续暂缓。
-
-## 当前 v0.5 里程碑（优先于下文 v0.4 历史约定）
-
-- 用户已确认方案 A：点击背景选择主动申请相册图片读取权限，应用内相册分组；全部/部分/拒绝均有路径，保留系统选图和文件入口。
-- 完整色相圆盘、饱和度/明度、常用色、独立配色与跟随背景取色；先预览再应用、取消和恢复默认；移除用户圈出的预览下方说明。
-- 代码：ui/BackgroundGallery.kt、ui/ThemePalette.kt、ui/AppearanceSettings.kt、appearance/AppearanceStore.kt、ui/Theme.kt；Manifest 新增分版本图片读取权限。旧外观兼容；Room/JSON 仍为 4；版本 0.5.0-dev / code 5。
-- 本地验证：Debug/AndroidTest 构建、41 JVM 单测、Lint 0 错误、API 35 模拟器 7 项外观专项及部分/全部/拒绝相册权限操作验证通过。详情 docs/V0.5-M1.md；证据 work/v05。没有真机验证、完整 QA 或 Release 构建。
-- 里程碑代码提交 329c64e；CI 34822871560 全部成功。随后仅同步完成记录，最终文档提交以 git log -1 为准。专用模拟器已关闭，保留数据与测试安装。目前无待补实现或验证尾项，不自动启动下一里程碑。
-- 宏观方案已获确认，范围内细节自主；下文“首版无手动调色/不申请全相册权限”等仅描述 v0.4，不再限制已批准 v0.5。
 
 ## 1. 项目目标与位置
 
 Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务和生活记录，并提供独立便签方便随手记下所想。以用户实际使用反馈驱动迭代，不自动启动候选功能。
 
 - 实际项目目录：`/Users/lukino/Documents/Codex/2026-09-09/ai-coding-ai-coding-ai-coding`。
-- 本次 Codex 任务目录：`/Users/lukino/Documents/Codex/2026-09-11/daybook-users-lukino-documents-codex-2026`，与项目目录不同；不要误在此目录新建或重做工程。
+- 本对话实际工作目录就是上述项目目录；早期对话的 2026-09-11 目录仅保留旧交付副本，不是当前开发目录。
 - 仓库：https://github.com/lukino0737/daybook 。发布：https://github.com/lukino0737/daybook/releases/tag/v0.4.0 。
 
 ## 2. 已完成阶段
@@ -32,6 +23,8 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 - v0.4 D（fd36ad0）：自选图片、本机副本与本地提取主题色、预览后应用/恢复默认；四主页共享背景，编辑与设置使用清晰底色，普通按钮及选中态跟随主题。
 - v0.4 正式交付（业务代码 8e03e3b，发布标签 2020711）：原签名覆盖升级、正式包验证、使用/验收文档和虚构截图、APK/源码/校验文件公开发布；1f1f764 完成远程校验与收尾文档。
 
+- v0.5 里程碑一（329c64e，完成记录 cd4aeaa）：相册读取权限、应用内相册分组与选图、部分授权/拒绝回退、完整调色盘、无背景独立配色、切回背景取色、删除用户圈出的外观说明。41 项 JVM 单测、7 项外观专项、Lint 和 CI 通过。开发版本 0.5.0-dev / code 5，仅提交推送，没有发布最终 APK。
+
 ## 3. 已批准的重要设计决策
 
 - 单 Android 模块；Kotlin、Compose、ViewModel/StateFlow、Repository、Room 分层，Android 8.0+；本地离线，无账号、联网权限或统计服务。不引入不必要的多模块、网络或云端架构。
@@ -39,10 +32,14 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 - 便签使用独立 memos 表，不是第四种 EntryKind，不混入日历/任务/回顾。正文优先，第一行非空内容作为摘要，默认无日期；空的新便签不保存，已有便签清空正文时需明确删除；保存失败明确提示，不悄悄丢弃。
 - 回顾先编辑条件、点击筛选才应用；默认全条件需确认；修改条件保留原结果，重置则同时清空输入和结果。无日期任务仅进入全时间段结果。
 - Room schema 4：保留 1→2→3→4 增量迁移，不破坏性清库。JSON 4 包含原记录、便签及提醒，读取 JSON 1–4。恢复先完整校验和确认，再建包含两张表的快照，事务整体替换；旧备份会清空便签，确认页明确提示，不合并。导出读取一致快照，失败保留原数据。
-- 外观通过系统选图及低版本回退导入本机副本，本地配色不上传；图片限制体积/解码尺寸并处理方向。预览不改变当前设置，原子配置保护失败恢复；外观与图片不进入 JSON。首版没有手动调色；放假蓝、补班红、个人事项绿及错误色不随背景混淆。
+- 外观导入本机副本，不上传；图片限制体积/解码尺寸并处理方向。预览不改变当前设置，原子配置保护失败恢复；外观与图片不进入 JSON。放假蓝、补班红、个人事项绿及错误色保持语义。
+- v0.5 已批准 A 方案：点击背景选择主动请求权限。Android 8–12L 使用 READ_EXTERNAL_STORAGE（maxSdk 32），13 使用 READ_MEDIA_IMAGES，14+ 适配 READ_MEDIA_VISUAL_USER_SELECTED。全部授权后浏览系统可访问媒体库、按相册筛选；部分授权只显示已授权图片并支持补选；拒绝保留系统选图与文件入口，回前台重新核对权限。不请求视频权限或所有文件管理权限。
+- 已批准完整调色盘：色相圆盘、可无障碍操作的色相/饱和度/明度滑块、七种常用色和色值预览；允许无背景独立配色，更换图片保留自定义色，主动切回背景取色。先预览、应用后持久化、返回取消；恢复默认同时重置背景和配色。实际主题色按可读性调整，不保证按钮颜色与原始色值完全相同。
+- Appearance 的 file/bitmap 可空；本地配置新增 customColor，旧 image/seed 配置默认跟随图片。无图片时仅保存 seed/customColor。Room、记录 JSON 和网络依赖均未变。
+- 用户要求删除的外观页文字：“四个主页使用同一背景；编辑和设置页面保留清晰底色。图片与配色仅保存在本机，不包含在记录备份中。”已删除，不恢复；使用文档继续说明备份边界。旧顶部自动取色说明也已移除。
 - 提醒时间独立于发生/截止日期。保留 `daybook.reminders` 原渠道，不重建渠道绕过用户设置；新安装默认系统声音/振动/高重要性。权限与厂商开关以系统为准，不猜测自启动/悬浮是否开启，不统一要求省电“无限制”。
 - 现行补发：启用且未发送、记录仍有效的提醒，原定时间已到且距离现在不足 24 小时才补发；晚于 60 秒标注补发。“已发出”表示已交给系统，不等于已阅读。系统强停后需重开 App；用户暂缓长期异常排查。
-- 继续原签名直接覆盖安装，不让用户卸载来解决升级；签名材料不能输出或提交。既有 v0.4 公开发布已获明确授权并完成，不能据此自行启动新版本或新功能。
+- 继续原签名直接覆盖安装，不让用户卸载来解决升级；签名材料不能输出或提交。既有 v0.4 公开发布已获明确授权并完成，不能据此发布 v0.5。v0.5 仅批准当前外观里程碑并推送 main，最终安装包、标签、Release 均未授权，不自动开始下一里程碑。
 
 ## 4. 已废弃或本版明确不采用的方向
 
@@ -50,14 +47,18 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 - 不把便签变成第四种记录类型，不强制便签标题/日期，不把便签纳入原回顾统计。
 - 不恢复回顾输入即刷新、不经点击筛选便默认展示全部的行为；重置不是仅清输入而保留旧结果。
 - 不破坏性迁移或清库，不绕过恢复确认，不把旧备份解释为保留现有便签，不自动合并备份。
-- 本版不采用云端图片分析、手动调色面板、图片纳入记录备份、联网假期数据、新通知渠道或强制统一省电设置。
+- 不采用云端图片分析、图片纳入记录备份、联网假期数据、新通知渠道或强制统一省电设置。
+- v0.5 已选 A；替代 B“只保留系统选择器并增加文件入口，不申请全相册权限”未采用为主方案。系统选图和文件入口仅保留为备用路径。仅提供预设色块的简化调色方案也未采用。
+- 旧 v0.4 的“不申请全相册权限、无手动调色”已被 v0.5 批准方案取代，不得按旧归档回退。
 - 完整图文教程/回看、正文照片、生日循环、生理期专用能力、小组件、同步、AI 录入等仍是候选，未获准实施；不因出现在旧文档或 backlog 就开工。
 
 ## 5. 未完成工作、已知问题与风险
 
-**当前没有获批但尚未实现的功能，也没有剩余发布收尾。** 以下为使用限制或待用户反馈事项，不是自动执行清单：
+**v0.5 里程碑一没有正在进行但未完成的实现或验证尾项，v0.4 发布收尾也已完成。v0.5 整版尚未发布，后续范围与发布均等待用户指令。** 以下为使用限制或待用户反馈事项，不是自动执行清单：
 
-- 未确认新的发布阻塞 bug。既有提醒异常复现需更长实测，用户要求先不管；跨品牌后台送达、声音/振动/悬浮/静音及 Android 8–12 真机仍未全面实测。系统强停不同于划掉后台。
+- v0.5 未确认新的阻塞 bug。Android 8–14 实际系统权限 UI、各厂商相册尚未真机验证；权限路由单测不能替代真实系统验证。全部授权只覆盖系统媒体库中可访问的图片，不含其他应用私有图片、隐藏媒体或全部云端原图；未开展海量图库专项。
+- 鸿蒙兼容问题仍未实测闭环：用户提供设备为华为 nova 15 Ultra / 鸿蒙 6，表示有真机，但没有返回安装/使用结果。此前 ADB 检查未发现设备，未安装测试。已查华为官方说明，鸿蒙 5+ 外部 APK 是否可安装取决于卓易通实际支持；Daybook 不是原生鸿蒙应用，不可声称鸿蒙 6 已适配。参考 https://consumer.huawei.com/cn/support/content/zh-cn16061787/ 。后续只有用户要求恢复时再推进该验证。
+- v0.4 未确认新的发布阻塞 bug。既有提醒异常复现需更长实测，用户要求先不管；跨品牌后台送达、声音/振动/悬浮/静音及 Android 8–12 真机仍未全面实测。系统强停不同于划掉后台。
 - Redmi K70 Pro 用户实测：开自启动后，“智能限制后台运行”和“无限制”均可在划后台后提醒；关自启动仅回前台补发。未提供具体系统版本，不能推广成所有机型通过。
 - 官方调休和清明资料覆盖 2025/2026，未覆盖年份不推测放假/补班；年度资料后续需维护。常用节日规则与官方放假状态分开。
 - 外观只保存在本机，换机后需重新选图；JSON 不带外观。恢复旧备份会清空便签，可从替换前快照恢复；不要删除这些提示。
@@ -66,7 +67,18 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 
 ## 6. 已验证结果及证据
 
-以下复用已完成验证，本次交接不重新运行：
+以下复用已完成验证，本次交接不重新运行。模拟器、真机与自动测试结果必须分开记录。
+
+### v0.5 里程碑一
+
+- 本次核对已有 final-build.log 为 BUILD SUCCESSFUL；已有 JVM XML 合计 41 tests / 0 failures / 0 errors；Lint 0 错误。Debug/AndroidTest 构建已通过，不包含 v0.5 Release 构建。
+- API 35 ARM64 专用模拟器 AppearanceTest 5 项、AppearanceUiTest 2 项，共 7 项通过。覆盖无背景配色、预览取消/应用/重启、换图保留自定义色、切回取色、旧配置、保存失败保护、恢复默认、解码与对比度。
+- 系统操作：首次选图出现全部/部分/拒绝弹窗；拒绝后系统选图可打开；部分授权 1 张后只展示 1 张；通过系统权限命令改为全部授权并返回前台显示 2 张，分组筛选正常；选择纯色测试背景、应用海蓝主题后重启保留。不是“全部授权按钮完整自动化测试”，也不是鸿蒙测试。
+- 调色盘与预览截图已目视检查，按钮可通过滚动到达；未开展 v0.5 完整 QA/大字体专项/跨品牌真机验收。
+- 代码 329c64e 的 GitHub CI 34822871560 成功，后续仅文档提交。证据：work/v05/final-build.log、daybook-v05-instrument.log、ci.log、daybook-v05-{denied,partial,palette,custom,restarted}.png；说明 docs/V0.5-M1.md。本次核对文件均存在。
+- 已解决环境/脚本问题：首次沙箱 Gradle 本机 socket 被限制，获准环境下通过；一次重启 UI 脚本读取过早得到空节点，待界面就绪后正常，崩溃缓冲区无记录。不把这两项当作待修业务 bug。
+
+### v0.4 已发布历史验证
 
 - Debug、AndroidTest、Release 构建通过；39 项 JVM 单测通过，Lint 0 错误。
 - A 筛选重置 1 项；B 分页/实际日历 2 项、节假日 2 项；C 便签 UI、通知/重建、备份故障回滚、并发状态、历史迁移等 7 项专项通过。
@@ -75,28 +87,29 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 - 正式包系统选图、未应用预览、应用后重启保留和恢复默认通过。低版本解码分支在 API 35 调用通过，不等于 Android 8 真机通过。
 - 首次授权/引导和多品牌设置回退复用此前专项，具体见 docs/TESTING.md；未进行完整跨品牌 QA。
 - CI：A/B 34751483037、C 34751845966、D 34761242134、业务交付 34762134277 均成功，后续为文档提交，无须为交接重跑。
-- 2026-09-14 已核对远程 APK、源码、SHA256SUMS 的摘要/大小，以及标签目标；证据 `work/v04/published-release.json`。本次交接重新检查本地文件与该已保存证据一致，没有再次联网验收。
+- 2026-09-14 已核对远程 APK、源码、SHA256SUMS 的摘要/大小，以及标签目标；证据 `work/v04/published-release.json`。之前发布收尾已检查本地文件与该保存证据一致；本次只核对输出存在，没有再次联网验收或重新计算摘要。
 - 原始证据：`work/v04/a-*.log`、`b-*.log`、`c-*.log`、`d-*.log`、`memo-large-ime.log`、`release-build.log`、`upgrade.log`、`final-ci.log`、`release-verification.json`；预览 `work/v04/previews`、`release-picker-*.png`。首启证据 `work/startup-*.log`。
 
 ## 7. Git 与交付物
 
-- 分支 `main`。本次整理前 HEAD/本地 origin/main 均为 `1f1f7644ad2b63a9fc59a62645af4b3ad6367b6b`，工作区干净；最近稳定业务代码 `8e03e3b76e3b58e1c016b253e01b197ffe193b39`，之后仅文档变化。
+- 分支 `main`。本次交接整理前 HEAD/本地 origin/main 均为 `cd4aeaa68a2c0bd84160024f4fb3cce89e245b64`，工作区干净；最近稳定业务代码 `329c64e5902d98f9223ab7f7f13e7ed6c36d5987`，CI 已通过。v0.4 稳定业务代码为 `8e03e3b`。
 - 已发布标签 `v0.4.0` 指向 `20207119374e724e73b1b1e6b302da4bb99b9098`。不得移动此标签或覆盖已发布附件；旧版 v0.3.0 及输出也保留。
 - 本次交接仅修改 CODEX_HANDOFF.md 与 docs/DEVELOPMENT.md，将作为文档阶段提交并推送；最终提交号和是否有未提交修改以 `git log -1` / `git status --short --branch` 为准。没有未提交业务代码、半成品迁移或仍运行的构建。
+- 本地 v0.5 测试输出为 app/build/outputs/apk/debug/app-debug.apk 与 app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk，均已核对存在；work/startup-qa 的签名 QA 副本可能已更新为本里程碑测试包，不能当作旧 v0.4 或最终发布包。没有 v0.5 最终交付物。
 - 项目 `outputs/`：daybook-v0.4.0.apk（12,736,215 字节）、daybook-v0.4.0-source.zip、SHA256SUMS-v0.4.0.txt、使用说明-v0.4.0.md、验收报告-v0.4.0.md；已核对存在。
 - APK SHA-256：`272a63c177889f63be663be17bd7a3baeefb0028422514e60be7cef05a460911`。
 - 源码 SHA-256：`051670ef7c210a2098dee78bf1b95cf477731fbe7fbd585974d773a09498784a`。
-- 用户可点击副本在 `/Users/lukino/Documents/Codex/2026-09-11/daybook-users-lukino-documents-codex-2026/outputs/`，包含上述文件与日历/便签/外观预览；安装包、源码、校验文件与项目输出逐字一致。
+- 用户可点击副本在 `/Users/lukino/Documents/Codex/2026-09-11/daybook-users-lukino-documents-codex-2026/outputs/`，包含旧 v0.4 文件与日历/便签/外观预览；之前已核对与项目输出一致，本次未重验该副本。
 - 发布源码归档来自标签 2020711，内含发布前交接快照；最新状态看工作区/main 的本文件。不要为了同步交接而重做已发布源码归档。图片和测试事项均为虚构样例，APK 不预填这些记录。
 
 ## 8. 关键文件与环境
 
-- 根 AGENTS.md：工程规则；README.md：下载与上手；docs/USAGE.md、TESTING.md、DEVELOPMENT.md、V0.4-PLAN.md、BACKLOG.md；docs/releases/v0.4.0.md 与 docs/screenshots/。
-- `app/src/main/java/dev/lukino/daybook/`：data/（Entry、Memo、Repository、DaybookDatabase、日期/筛选规则）、ui/（DaybookScreen、MonthCalendar、MemoController/MemoEditor、AppearanceSettings、Theme、StartupReminderSetup）、appearance/（AppearanceStore/ImageColors）、reminder/（ReminderTarget/Coordinator、品牌说明及设置回退）、backup/（BackupCodec/Service）。
+- 根 AGENTS.md：工程规则；README.md：下载与上手；docs/USAGE.md、TESTING.md、DEVELOPMENT.md、V0.5-M1.md、V0.4-PLAN.md、BACKLOG.md；docs/releases/v0.4.0.md 与 docs/screenshots/。
+- `app/src/main/java/dev/lukino/daybook/`：data/（Entry、Memo、Repository、DaybookDatabase、日期/筛选规则）、ui/（DaybookScreen、MonthCalendar、MemoController/MemoEditor、AppearanceSettings、BackgroundGallery、ThemePalette、Theme、StartupReminderSetup）、appearance/（AppearanceStore/ImageColors）、reminder/（ReminderTarget/Coordinator、品牌说明及设置回退）、backup/（BackupCodec/Service）。
 - `app/src/test/`、`app/src/androidTest/`、`app/schemas/`：已有测试和历史 schema。schema 4 已核对存在；未来改数据路径保留迁移与针对性验证。
-- `app/build.gradle.kts`：已核对 versionCode 4 / versionName 0.4.0、minSdk 26。现有 Gradle 8.13、AGP 8.13.2、Kotlin 2.2.21、Compose BOM 2025.12.01、Room 2.8.4。
+- `app/build.gradle.kts`：已核对 versionCode 5 / versionName 0.5.0-dev、minSdk 26。现有 Gradle 8.13、AGP 8.13.2、Kotlin 2.2.21、Compose BOM 2025.12.01、Room 2.8.4。
 - `work/v04/build.sh` 封装现有环境：JDK 位于 work/tooling/jdk-21.0.12.1.jdk/Contents/Home，Gradle 缓存 work/gradle-user、SDK work/android-sdk、Android 用户目录 work/android-user。不为接手重新安装工具。
-- 只使用专用 Daybook_API_35。原 AVD 目录 work/avd 保留 QA 数据/安装；独立升级 AVD 目录 work/v04/upgrade-avd 保留 Release 安装与默认外观。上轮均已关闭；本次没有启动。切勿卸载清库或操作用户手机/其他模拟器来重复验收。
+- 只使用专用 Daybook_API_35。原 AVD 目录 work/avd 保留 QA 数据/安装；独立升级 AVD 目录 work/v04/upgrade-avd 保留 Release 安装与默认外观。v0.5 使用 work/avd 覆盖安装原签名测试包并保留数据，包含纯色相册测试图片及自定义主题；验证结束已关闭。独立升级 AVD 未动。本次交接没有启动模拟器。切勿卸载清库或操作用户手机/其他模拟器来重复验收。
 - work/v04/verify_upgrade.py 仅适用于它断言未安装 App 的全新独立升级实例；work/startup-qa/install_test.py 做原签名 QA 覆盖。不要在恢复时盲目运行旧升级/清理脚本。
 - work/github_cli.py 复用认证；签名材料 .local/signing/daybook-release.jks 与 keystore.properties 必须保持忽略，不打印/提交。work、outputs、本地配置、数据库、签名与构建产物不入 Git；已有授权或环境权限不假设跨会话继承。
 
@@ -104,16 +117,16 @@ Daybook 是持续维护的离线安卓个人日历：统一日程、截止任务
 
 优先级仅供用户决策，不代表已授权开工：
 
-1. 当前先简短报告接手状态，等待用户下一步需求；v0.4 没有待补功能或发布尾项。
+1. 最高优先级：简短报告接手状态后等待用户下一步需求。v0.5 里程碑一已完成并推送，不能把“继续”理解为自动发布最终 APK；v0.4 也没有待补发布尾项。
 2. 若用户报告数据损坏或明确可复现问题，先保留证据并做对应低成本定位。既有提醒异常仍暂缓，除非用户要求恢复。
-3. 收集便签快捷性、背景可读性、日历/筛选及各品牌设置体验；只在用户确认范围后改进。适时提示后续年度假期资料维护，不自行更新依赖或 backlog。
+3. 用户提出后优先收集 v0.5 相册覆盖范围、授权体验、调色盘和配色可读性反馈；如继续鸿蒙检验，先确认真机当前安装结果。只在用户确认范围后改进。适时提示后续年度假期资料维护，不自行更新依赖或 backlog。
 4. 生日循环、正文照片、完整教程、生理期、小组件、同步、AI 等先讨论优先级和方案。
 
 新对话先检查：
 
 1. 确认实际项目目录，读本文件、根 AGENTS.md 与当前 Codex 个性化说明（本机 ~/.codex/AGENTS.md）；最新用户/个性化说明优先，不能用旧归档恢复过时额度规则。
-2. 查看 `git status --short --branch`、最近提交和必要的相关文件；区分发布标签、业务代码与后续纯文档提交。本文件已明确发布收尾完成，不按旧“待补”记录重做。
-3. 若仅接手，读取已有发布证据和输出即可，不启动模拟器、不重建、完整 QA、重复上传或重打标签；有实际差异时先说明并按可验证事实恢复。
+2. 查看 `git status --short --branch`、最近提交和必要的相关文件；区分 v0.4 发布标签、v0.5 业务代码 329c64e 与后续纯文档提交。读取 docs/V0.5-M1.md 和 work/v05 已有日志，不能把旧归档中的“待发布/待验收”当作当前待办。
+3. 若仅接手，读取已有 v0.5 验证日志及 v0.4 发布输出即可，不启动模拟器、不重建、完整 QA、重复上传或重打标签；有实际差异时先说明并按可验证事实恢复。
 4. 用户有新需求再按已确认范围推进；宏观方案必须先说明推荐与至少一个替代方向、利弊风险及推荐理由，获确认后实施。批准范围内的微观细节自主完成，不重复索要已有授权。
 5. 每个稳定里程碑更新开发记录，检查暂存后提交推送 main；不强推。用户只让记下时不实施；交接结束即停止。
 
