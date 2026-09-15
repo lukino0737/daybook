@@ -2,6 +2,8 @@
 
 更新：2026-09-15。v0.5.0/code6 已完成实现、本地验收、CI、公开发布及远程附件校验。业务提交074370d，CI环境修复/发布标签提交cd35b24。本轮完成后等待用户新需求，不自动启动backlog，不重做已完成构建或QA。
 
+本次仅按用户要求整理交接，不继续开发。项目目录：`/Users/lukino/Documents/Codex/2026-09-09/ai-coding-ai-coding-ai-coding`。交接检查读取了实际Git状态、版本配置、既有测试/构建日志及发布证据；没有重新构建、运行测试或重新发布。
+
 发布：https://github.com/lukino0737/daybook/releases/tag/v0.5.0 。APK、源码与SHA256SUMS三个附件均已校验远程大小和SHA256；证据 work/v05/published-release.json。
 
 ## 当前目标与授权
@@ -12,7 +14,7 @@
 
 ## 已完成
 
-- 历史：v0.1基础/备份，v0.2提醒/标签，v0.3四类使用路径相关日历优化，v0.4独立便签、背景主题、筛选重置、首次提醒引导。细节见 docs/DEVELOPMENT.md、TESTING.md、V0.4-PLAN.md。
+- 历史：v0.1基础/备份，v0.2提醒/标签，v0.3日历使用体验优化，v0.4独立便签、背景主题、筛选重置、首次提醒引导。细节见 docs/DEVELOPMENT.md、docs/TESTING.md、docs/V0.4-PLAN.md。
 - v0.5外观里程碑329c64e：相册权限、应用内相册分组选图、部分授权补选/拒绝回退、完整调色盘、无背景独立配色、切回背景取色、删除指定说明。41项JVM与7项外观专项及CI34822871560通过。
 - 本轮：任务页在有/无截止日期下面增加默认收起的已完成分区，最近修改倒序；状态先保存，勾选/划线/颜色渐变及400毫秒过渡后归类，反选恢复。只有任务可以完成和逾期，导航数字只计未完成。
 - 任务页全部任务、便签、日历当天三类事项支持左滑露出删除按钮，点击后二次确认，一次展开一条；记录类原有撤销保留。回顾和近期截止卡片不扩展手势。提供无障碍删除操作。
@@ -31,7 +33,9 @@
 
 ## 当前Git、交付与后续
 
-- 本轮开始基线main/3b532c6；外观代码329c64e，本轮业务074370d，CI修复cd35b24均已推送。发布标签v0.5.0指向cd35b246b7f848fafc9f8d004f7017cb02d3de78。最后收尾文档提交以git log/status为准，不强推。
+- 当前分支main；本次交接检查开始时HEAD与本地origin/main均为940bd9521c81fc6f63de50785430fb34002e1ad4，工作区干净。940bd95已完成上一轮发布文档收尾；没有遗留未提交业务代码。
+- 最近稳定业务提交074370d268515a703b29ebe47f7b7cae5a13eae8；CI修复及发布标签v0.5.0指向cd35b246b7f848fafc9f8d004f7017cb02d3de78。更早外观代码329c64e、交接基线3b532c6均保留。
+- 本次交接只修改CODEX_HANDOFF.md与docs/DEVELOPMENT.md；若已提交，其提交号用git log -1读取（文档不自引用自身提交号）。恢复时用git status核对是否仍有未提交修改，不强推。
 - CI34936898741两次因旧tools包不存在而在Android准备步骤失败；显式packages: platform-tools后，CI34937365482全部成功。业务APK未改变，源码归档包含CI修复。Node/action弃用提示保留，非本轮阻塞。
 - 已发布 outputs/daybook-v0.5.0.apk、daybook-v0.5.0-source.zip、SHA256SUMS-v0.5.0.txt；本地另有使用说明-v0.5.0.md、验收报告-v0.5.0.md。附件与标签目标均已远程核对。
 - APK SHA256：ac8ee5f71959a2012d53d18314f8f92818d13d47a6e09ee5f1a9cd7cc872d1ad；源码SHA256：070dd9c02b5c41ebaaa6d47fa4cf77b3f291443ff6b6b684754fef960246b20b。
@@ -49,6 +53,32 @@
 - 提醒独立于事项日期，保留daybook.reminders渠道，不绕过系统开关。未发出的过去24小时提醒可补发，超60秒标注；系统强停需重开。RedmiK70Pro既有用户实测不能推广全部机型。
 - 2025/2026假期调休内置，未覆盖年份不推测。生日循环、正文照片、完整教程、生理期、小组件、同步、AI均未授权开工。
 - 不复制原始需求里的私人图片或记录进公开仓库。签名、本地配置、数据库、备份、work、outputs与构建产物保持忽略。
+
+## 已明确不采用的方案
+
+- 不按原需求文件名改为0.4.1；用户已选择继续0.5.0，且正式发布已完成。
+- 不恢复空正文便签弹窗的「继续编辑」选项；当前只保留内容退出或删除，删除仍需确认。
+- 不把本轮左滑删除扩展到回顾或近期截止，不把便签混入日历/任务/回顾，不增加强制标题或日期。
+- 不为本轮改变Room/JSON版本、引入新依赖或清库迁移；备份恢复不改为合并。
+- 不为更新交接替换已发布附件、移动发布标签或重建安装包。提醒异常、鸿蒙验证及backlog并非当前自动续做事项。
+
+## 未完成工作、已知问题与风险
+
+- 没有进行中但尚未完成的功能、验收、CI或发布工作。本次仅保存交接记录；结束后停止。
+- 既有提醒异常仍暂缓，不能因便签通知专项通过而宣称已修复；系统限制及机型差异仍存在。
+- 鸿蒙6及跨品牌真机、Android8–14实际授权界面和大图库仍未专项验证。模拟器通过不代表这些场景通过。
+- CI的Node/action弃用提示尚未处理，当前不阻塞；仅在用户授权维护或实际失败时评估。
+- 假期调休只覆盖2025/2026，后续年份需要可靠数据。历史测试失败、已解决的环境问题见上方证据及下方环境说明，不作为当前未修复业务bug。
+
+## 关键文件与目录
+
+- 规则与进度：根目录AGENTS.md、CODEX_HANDOFF.md；当前用户个性化说明位于`/Users/lukino/.codex/AGENTS.md`，以恢复时实际内容及用户新指令为准。
+- 已批准范围与记录：docs/V0.5-M1.md、docs/V0.5-M2.md、docs/DEVELOPMENT.md、docs/TESTING.md、docs/USAGE.md、docs/releases/v0.5.0.md；docs/BACKLOG.md仅为候选事项。
+- 版本：app/build.gradle.kts（versionName 0.5.0 / versionCode 6）；CI：.github/workflows/android.yml。
+- UI目录app/src/main/java/dev/lukino/daybook/ui/：DaybookScreen.kt、SwipeDeleteRow.kt、DaybookViewModel.kt负责列表/删除/状态；MemoController.kt、MemoEditor.kt负责便签编辑与保存退出。
+- 数据与恢复：app/src/main/java/dev/lukino/daybook/data/下DaybookDatabase.kt、EntryRepository.kt；backup/下BackupCodec.kt、BackupService.kt；reminder/下ReminderCoordinator.kt。Room历史结构在app/schemas/。
+- 自动测试：app/src/test/、app/src/androidTest/；现有JVM结果app/build/test-results/testDebugUnitTest/（本次读取XML合计43项，失败/错误/跳过均0）。
+- 本地证据work/v05/（尤其published-release.json、release-verification.json及上文指定日志）；交付物outputs/。这些是被Git忽略的本机成果，新机器不保证存在。
 
 ## 环境与已解决问题
 
@@ -68,4 +98,16 @@
 
 恢复先读本文件、AGENTS.md与当前个性化说明，低成本核对实际Git/输出/日志；复用已通过成果，实际事实优先于旧文字，不强行提交未验证或不稳定状态。
 
-最后文档收尾曾被自动审批以额度耗尽拒绝，四份完成记录已保存但未暂存。用户继续后核对额度已恢复；本次只提交推送这四份文档并同步最新额度约定，发布包、源码附件、标签与既有验收均复用，不重新构建或发布。
+此前最后四份收尾文档暂存曾被自动审批以额度耗尽拒绝，之后已经恢复并于940bd95提交推送，已不是待办。本次复用发布包、源码附件、标签与既有验收，不重新构建或发布。
+
+## 下一阶段建议与恢复顺序
+
+以下建议不构成新的开发授权：
+
+1. P0：新对话先读本交接、项目AGENTS.md和最新个性化说明；低成本执行git status --short --branch、git log -3，核对版本配置及已有输出是否存在。简短报告接手状态，然后等待用户具体需求。
+2. P0：若文字与实际状态不一致，以文件、Git和可验证输出为准。不要把历史「待发布」「文档尚未暂存」段落当成当前待办；不要重跑完整QA来确认已有成功记录。
+3. P1：用户提供v0.5.0使用反馈后，先定位具体触发条件、版本及机型，再做针对性修复；涉及数据风险时先保留证据，禁止卸载或清库。
+4. P2：仅在用户重新提出时推进提醒异常或鸿蒙真机验证，分开记录真机与模拟器结果。
+5. P3：新功能、年度假期更新或backlog先确认范围；宏观方案仍需列出推荐与替代方向、优缺点和影响，得到用户确认后实施。
+
+本次交接完成后停止，不自动开发、发布或启动新任务。
