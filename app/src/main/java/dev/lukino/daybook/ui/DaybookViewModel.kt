@@ -101,7 +101,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
             ?: when (view.value) {
                 "review" -> Draft(date = selected.value, kind = EntryKind.NOTE)
                 "tasks" -> Draft(date = selected.value, kind = EntryKind.TASK)
-                else -> Draft(date = selected.value)
+                else -> Draft(date = selected.value, kind = defaultCalendarKind(LocalDate.parse(selected.value), LocalDate.now()))
             })
     }
     fun openEntry(id: String) {
@@ -133,8 +133,19 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         if (view.value == "day") entry.date?.let { select(LocalDate.parse(it)); setMonth(it.take(7)) } ?: setView("tasks")
         channel.send(UiNotice.Message("已保存"))
     }
+    val completing = MutableStateFlow<Set<String>>(emptySet())
     fun toggle(entry: Entry) = runWrite {
-        repository.save(entry.copy(completed = !entry.completed, updatedAt = maxOf(System.currentTimeMillis(), entry.createdAt)))
+        if (entry.kind != EntryKind.TASK) return@runWrite
+        if (!entry.completed) completing.value += entry.id
+        try {
+            repository.save(entry.copy(completed = !entry.completed, updatedAt = maxOf(System.currentTimeMillis(), entry.updatedAt + 1)))
+            // Persist before the visual pause; leaving the screen must not cancel completion.
+            if (!entry.completed) kotlinx.coroutines.delay(400)
+        } finally { completing.value -= entry.id }
+    }
+    fun deleteMemo(memo: Memo) = runWrite {
+        repository.deleteMemo(memo.id)
+        channel.send(UiNotice.Message("已删除便签"))
     }
     fun delete(entry: Entry) = runWrite {
         repository.delete(entry.id)
@@ -181,3 +192,6 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         }
     }
 }
+
+internal fun defaultCalendarKind(selected: LocalDate, today: LocalDate): EntryKind =
+    if (selected.isBefore(today)) EntryKind.NOTE else EntryKind.EVENT

@@ -16,6 +16,7 @@ class MemoController(private val repository: EntryRepository, private val saved:
     val busy = MutableStateFlow(false)
     val status = MutableStateFlow("已保存")
     val error = MutableStateFlow<String?>(null)
+    val confirmBlankExit = MutableStateFlow(false)
     private val writer = Mutex()
     private var job: Job? = null
     private fun current() = raw.value?.let { Json.decodeFromString<Memo>(it) }
@@ -27,6 +28,7 @@ class MemoController(private val repository: EntryRepository, private val saved:
             saved["memo-draft"] = Json.encodeToString(memo ?: Memo())
             status.value = if (memo == null) "输入后自动保存" else "已保存"
             error.value = null
+            confirmBlankExit.value = false
         }
     }
     fun change(value: Memo) {
@@ -47,8 +49,12 @@ class MemoController(private val repository: EntryRepository, private val saved:
         return try {
             if (value.body.isBlank()) {
                 if (leaving && saved.get<Boolean>("memo-new") == true) repository.deleteMemo(value.id)
-                else if (leaving) error("正文不能为空；不需要时请选择删除")
-                status.value = "输入后自动保存"
+                else if (leaving) {
+                    error.value = null
+                    confirmBlankExit.value = true
+                    return false
+                }
+                status.value = if (saved.get<Boolean>("memo-new") == true) "输入后自动保存" else "正文已清空，上次保存的内容仍保留"
             } else {
                 repository.saveMemo(value)
                 if (current() == value) status.value = "已保存"
@@ -68,11 +74,28 @@ class MemoController(private val repository: EntryRepository, private val saved:
             } else persist(true)
         }
     }
+    fun cancelBlankExit() { confirmBlankExit.value = false }
+    fun keepSavedAndClose() {
+        if (busy.value) return
+        busy.value = true
+        scope.launch {
+            try {
+                job?.cancelAndJoin()
+                writer.withLock {
+                    if (current()?.body?.isBlank() == true && saved.get<Boolean>("memo-new") != true) {
+                        saved["memo-draft"] = null
+                        confirmBlankExit.value = false
+                        error.value = null
+                    }
+                }
+            } finally { busy.value = false }
+        }
+    }
     fun close(remove: Boolean = false) {
         if (busy.value) return
         busy.value = true
         scope.launch {
-            try { if (finish(remove)) saved["memo-draft"] = null }
+            try { if (finish(remove)) { saved["memo-draft"] = null; confirmBlankExit.value = false } }
             finally { busy.value = false }
         }
     }

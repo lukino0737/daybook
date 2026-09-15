@@ -29,6 +29,7 @@ import java.time.LocalDate
     val busy by controller.busy.collectAsStateWithLifecycle()
     val status by controller.status.collectAsStateWithLifecycle()
     val error by controller.error.collectAsStateWithLifecycle()
+    val blankExit by controller.confirmBlankExit.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -45,7 +46,7 @@ import java.time.LocalDate
         Scaffold(Modifier.fillMaxSize().imePadding().testTag("memo-editor"), topBar = {
             TopAppBar(title = { Text("便签") }, navigationIcon = {
                 IconButton(enabled = !busy, onClick = { controller.close() }, modifier = Modifier.testTag("memo-back")) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "返回并保存") }
-            }, actions = { TextButton(enabled = !busy, onClick = { confirmDelete = true }) { Text("删除") } })
+            }, actions = { TextButton(enabled = !busy, onClick = { controller.close() }, modifier = Modifier.testTag("memo-done")) { Text("完成") } })
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = value.body, onValueChange = { if (it.length <= 20_000) controller.change(value.copy(body = it)) }, enabled = !busy,
@@ -61,9 +62,19 @@ import java.time.LocalDate
                 }
                 ReminderEditor(Draft(kind = EntryKind.TASK, reminderAt = value.reminderAt), busy,
                     { controller.change(value.copy(reminderAt = it.reminderAt)) }, { settings = true })
+                TextButton(enabled = !busy, onClick = { confirmDelete = true }, modifier = Modifier.testTag("memo-delete"),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("删除便签") }
             }
         }
+        if (blankExit) AlertDialog(onDismissRequest = controller::cancelBlankExit,
+            title = { Text("便签正文已清空") },
+            text = { Text("可以保留上次保存的内容并退出，或删除这条便签。") },
+            confirmButton = { TextButton(enabled = !busy, onClick = controller::keepSavedAndClose) { Text("保留内容并退出") } },
+            dismissButton = {
+                TextButton(enabled = !busy, onClick = { controller.cancelBlankExit(); confirmDelete = true }, modifier = Modifier.testTag("blank-delete")) { Text("删除便签") }
+            })
         if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("删除这条便签？") },
+            text = { Text(error ?: "确认后将删除正文、日期及这条便签的提醒。") },
             confirmButton = { TextButton(enabled = !busy, onClick = { controller.close(true) }) { Text("确认删除") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } })
     }
