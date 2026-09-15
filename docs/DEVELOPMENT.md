@@ -215,3 +215,17 @@
 - 业务提交074370d已推送。CI34936898741两次在setup-android准备环境时失败，尚未执行构建；日志明确为sdkmanager找不到旧tools包。
 - 根据[Action输入定义](https://github.com/android-actions/setup-android/blob/v3/action.yml)显式设置packages: platform-tools，覆盖默认tools platform-tools。保留后续Android36平台和35.0.0构建工具安装，不改业务代码/依赖版本，不重建已验收APK。
 - 本地验收结果仍复用；等待修复提交的远程检查通过后发布。
+
+
+## v0.5.0 发布与收尾完成（2026-09-15）
+
+- CI修复cd35b24已推送，[CI34937365482](https://github.com/lukino0737/daybook/actions/runs/34937365482)全部成功；此前旧tools包导致的环境准备失败已解除。
+- 按用户授权创建v0.5.0正式Release，标签指向cd35b246b7f848fafc9f8d004f7017cb02d3de78，上传原签名APK、源码归档与SHA256SUMS。
+- 远程三个附件的大小/SHA256与本地逐项一致，标签目标正确；证据work/v05/published-release.json。两个专用模拟器正常关闭，数据保留。源码归档包含发布前交接快照，最新完成记录见main。
+- 本轮实现、验收、提交推送、发布和收尾均完成，等待用户新需求，不启动backlog。
+
+
+## v0.5.0 最后文档收尾恢复（2026-09-15）
+
+- 上轮APK、源码与校验文件已发布且远程核对完成，最后四份文档暂存被额度限制的自动审批拒绝，未执行。
+- 用户继续后仅核对Git、保存的发布证据和CI结果，复用全部已验证成果；同步当前个性化额度规则，提交推送已保存的收尾文档。未重建、重跑QA、改动标签或替换发布附件。
