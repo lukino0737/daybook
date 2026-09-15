@@ -208,3 +208,10 @@
 - 43项JVM、Lint、Debug/AndroidTest/Release通过；15项正常字号专项分批通过，另1项150%字号预览通过。日历测试因FAB遮挡手势起点曾失败，修正起点后通过，详见V0.5-M2.md。
 - 真实v0.4.0→0.5.0/code6同签名覆盖升级、全部记录/便签字段与旧渠道保留、正式启动及便签通知/重建通过。提醒异常与鸿蒙真机继续暂缓。
 - 本轮业务与文档待提交推送/CI及安装包发布；既有v0.4.0附件不动。
+
+
+## v0.5 发布前CI环境修复（2026-09-15）
+
+- 业务提交074370d已推送。CI34936898741两次在setup-android准备环境时失败，尚未执行构建；日志明确为sdkmanager找不到旧tools包。
+- 根据[Action输入定义](https://github.com/android-actions/setup-android/blob/v3/action.yml)显式设置packages: platform-tools，覆盖默认tools platform-tools。保留后续Android36平台和35.0.0构建工具安装，不改业务代码/依赖版本，不重建已验收APK。
+- 本地验收结果仍复用；等待修复提交的远程检查通过后发布。
