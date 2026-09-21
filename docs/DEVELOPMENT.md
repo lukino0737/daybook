@@ -259,5 +259,7 @@
 - 修正草稿间隔输入与保存值不一致、已发送单次提醒的预览、浅色界面的状态栏对比度；失败提示保留输入且不暴露底层SQLite错误。
 - 53项JVM、Lint 0错误、Debug/AndroidTest构建通过。API35正常字号19种场景分批通过：初次组合18通过1项旧日历删除确认框断言失败，相同用例独立复验通过；最后日历局部调整后正常3项复验通过。150%字号3项通过，日历局部调整后另1项大字号复验通过。失败批次原日志保留，不声称首次一次性全过。
 - 正常/150%字号的编辑、列表、保存失败和删除确认截图已目视检查。使用虚构样例和隔离数据库；未操作真机，未验证正式签名包覆盖升级，未发布/交付安装包。
-- 证据work/v06/m3-final-layout-build.log、m3-normal.log、m3-calendar-isolated.log、m3-calendar-final.log、m3-large.log、m3-calendar-large-final.log及previews-final/。等待本里程碑推送后的CI最终结果。
+- 证据work/v06/m3-final-layout-build.log、m3-normal.log、m3-calendar-isolated.log、m3-calendar-final.log、m3-large.log、m3-calendar-large-final.log及previews-final/。本里程碑38df5cb已推送main，[CI35577995029](https://github.com/lukino0737/daybook/actions/runs/35577995029)成功（证据work/v06/m3-ci-final.json）。
 - 本机默认Git触发Xcode许可提示，使用既有Command Line Tools（命令级DEVELOPER_DIR）完成Git操作，未变更系统许可或安装环境。
+
+- 第一批三个里程碑已完成，最后仅同步完成记录。专用API35模拟器已恢复字号1.0并关闭，保留数据。不交付安装包、不创建正式发布、不改动v0.5.0附件；正式签名包覆盖升级及鸿蒙6真机尚未验证。停止，等待用户下一步需求。
