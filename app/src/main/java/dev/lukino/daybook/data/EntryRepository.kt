@@ -12,6 +12,30 @@ class EntryRepository(private val database: DaybookDatabase) {
     val entries = dao.observeAll()
     private val memoDao get() = database.memos()
     val memos = memoDao.observeAll()
+    private val reminderDao get() = database.reminders()
+    val reminders = reminderDao.observeAll()
+
+    suspend fun allReminders(): List<StandaloneReminder> = reminderDao.all()
+    suspend fun saveReminder(value: StandaloneReminder, now: java.time.Instant = java.time.Instant.now(),
+        zone: java.time.ZoneId = java.time.ZoneId.systemDefault(), expectExisting: Boolean = false) = writes.withLock {
+        // Delivery fields belong to persisted state, not an editor draft.
+        value.copy(deliveredFor = null).validate()
+        val old = reminderDao.get(value.id)
+        require(!expectExisting || old != null) { "这条提醒已删除" }
+        require(old == null || old.revision == value.revision) { "提醒计划已改变，请重新打开后编辑" }
+        val changed = old == null || !old.sameSchedule(value)
+        val resumed = old != null && !old.enabled && value.enabled
+        if (value.repeat == RepeatKind.ONCE && (changed || resumed)) {
+            require(java.time.LocalDate.parse(value.startDate).atTime(java.time.LocalTime.parse(value.time)).atZone(zone).toInstant() > now) { "请将单次提醒设为未来时间" }
+        }
+        val saved = value.copy(effectiveFrom = if (changed || resumed) now.toEpochMilli() else old!!.effectiveFrom,
+            revision = if (old == null) 1 else if (changed || resumed) Math.addExact(old.revision, 1) else old.revision,
+            deliveredFor = if (changed) null else old?.deliveredFor,
+            createdAt = old?.createdAt ?: now.toEpochMilli(), updatedAt = now.toEpochMilli())
+        saved.validate()
+        reminderDao.save(saved)
+    }
+    suspend fun deleteReminder(id: String) = writes.withLock { reminderDao.delete(id) }
 
     // Scheduling and delivery share the write lock: stale notifications cannot race with edits/restores.
     suspend fun reconcileReminders(deliver: (ReminderTarget) -> Boolean, schedule: (List<ReminderTarget>) -> Unit) = writes.withLock {
@@ -34,14 +58,15 @@ class EntryRepository(private val database: DaybookDatabase) {
         memoDao.save(value)
     }
     suspend fun deleteMemo(id: String) = writes.withLock { memoDao.delete(id) }
-    suspend fun snapshotData(): Pair<List<Entry>, List<Memo>> = writes.withLock { dao.all() to memoDao.all() }
-    suspend fun replaceData(entries: List<Entry>, memos: List<Memo>, beforeReplace: suspend (List<Entry>, List<Memo>) -> Unit) = writes.withLock {
-        entries.forEach(Entry::validate); memos.forEach(Memo::validate)
+    suspend fun snapshotData(): Triple<List<Entry>, List<Memo>, List<StandaloneReminder>> = writes.withLock { Triple(dao.all(), memoDao.all(), reminderDao.all()) }
+    suspend fun replaceData(entries: List<Entry>, memos: List<Memo>, reminders: List<StandaloneReminder> = emptyList(), beforeReplace: suspend (List<Entry>, List<Memo>, List<StandaloneReminder>) -> Unit) = writes.withLock {
+        entries.forEach(Entry::validate); memos.forEach(Memo::validate); reminders.forEach(StandaloneReminder::validate)
+        require(reminders.map { it.id }.distinct().size == reminders.size) { "备份包含重复提醒 ID" }
         require(entries.map { it.id }.distinct().size == entries.size && memos.map { it.id }.distinct().size == memos.size) { "备份包含重复 ID" }
-        beforeReplace(dao.all(), memoDao.all())
+        beforeReplace(dao.all(), memoDao.all(), reminderDao.all())
         database.withTransaction {
-            dao.clear(); memoDao.clear()
-            dao.insertAll(entries); memoDao.insertAll(memos)
+            dao.clear(); memoDao.clear(); reminderDao.clear()
+            dao.insertAll(entries); memoDao.insertAll(memos); reminderDao.insertAll(reminders)
         }
     }
 

@@ -29,7 +29,7 @@ class BackupCodecTest {
     }
     @Test fun readsV2WithEmptyTagsAndRejectsV3MissingTags() {
         val current = BackupCodec.encode(listOf(sample.first()))
-        val v2 = current.replace("\"formatVersion\": 4", "\"formatVersion\": 2").replace("    \"tags\": [],\n", "")
+        val v2 = current.replace("\"formatVersion\": 5", "\"formatVersion\": 2").replace("    \"tags\": [],\n", "")
         assertTrue(BackupCodec.decode(v2).entries.single().tags.isEmpty())
         assertThrows(Exception::class.java) { BackupCodec.decode(current.replace("\"tags\":", "\"missingTags\":")) }
     }
@@ -38,7 +38,7 @@ class BackupCodecTest {
     }
     @Test fun rejectsMalformedUnknownAndTruncatedBackups() {
         val valid = BackupCodec.encode(sample)
-        listOf("not JSON", valid.take(valid.length / 2), valid.replace("\"formatVersion\": 4", "\"formatVersion\": 9"),
+        listOf("not JSON", valid.take(valid.length / 2), valid.replace("\"formatVersion\": 5", "\"formatVersion\": 9"),
             valid.replace("\"EVENT\"", "\"UNKNOWN\""), valid.replace("2026-09-10", "2026-02-30"),
             valid.replace("\"id\":", "\"missingId\":"), valid.replace("\"01:00\"", "\"25:00\""))
             .forEach { assertThrows(Exception::class.java) { BackupCodec.decode(it) } }

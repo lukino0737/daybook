@@ -14,8 +14,8 @@ class BackupService(context: Context, private val repository: EntryRepository) {
     private val snapshot = AtomicFile(File(context.filesDir, "before-restore.json"))
 
     suspend fun export(uri: Uri) = withContext(Dispatchers.IO) {
-        val (entries, memos) = repository.snapshotData()
-        val content = BackupCodec.encode(entries, memos = memos)
+        val (entries, memos, reminders) = repository.snapshotData()
+        val content = BackupCodec.encode(entries, memos = memos, reminders = reminders)
         (resolver.openOutputStream(uri, "wt") ?: error("无法写入所选文件"))
             .bufferedWriter(Charsets.UTF_8).use { it.write(content) }
     }
@@ -27,8 +27,9 @@ class BackupService(context: Context, private val repository: EntryRepository) {
         snapshot.openRead().use { BackupCodec.decode(readLimited(it)) }
     }
     suspend fun restore(archive: BackupArchive) = withContext(Dispatchers.IO) {
-        repository.replaceData(archive.entries, archive.memos) { previous, previousMemos ->
-            val encoded = BackupCodec.encode(previous, memos = previousMemos)
+        BackupCodec.validate(archive)
+        repository.replaceData(archive.entries, archive.memos, archive.reminders) { previous, previousMemos, previousReminders ->
+            val encoded = BackupCodec.encode(previous, memos = previousMemos, reminders = previousReminders)
             val stream = snapshot.startWrite()
             try { stream.write(encoded.toByteArray(Charsets.UTF_8)); snapshot.finishWrite(stream) }
             catch (e: Exception) { snapshot.failWrite(stream); throw e }

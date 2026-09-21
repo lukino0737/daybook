@@ -44,6 +44,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable fun DaybookScreen(vm: DaybookViewModel) {
     val entries by vm.entries.collectAsStateWithLifecycle()
+    val reminders by vm.reminders.collectAsStateWithLifecycle()
     val completing by vm.completing.collectAsStateWithLifecycle()
     var completedExpanded by rememberSaveable { mutableStateOf(false) }
     var openedSwipe by remember { mutableStateOf<String?>(null) }
@@ -240,9 +241,10 @@ import androidx.compose.material.icons.outlined.MoreVert
     pending?.let { archive ->
         AlertDialog(onDismissRequest = vm::dismissRestore, modifier = Modifier.testTag("restore-dialog"),
             title = { Text(if (restoringSnapshot) "恢复替换前快照？" else "从备份恢复？") },
-            text = { Text("备份包含 ${archive.entries.size} 条记录、${archive.memos.size} 条便签，将完整替换当前 ${entries.size} 条记录、${memos.size} 条便签。" +
+            text = { Text("备份包含 ${archive.entries.size} 条记录、${archive.memos.size} 条便签、${archive.reminders.size} 条独立提醒，将完整替换当前 ${entries.size} 条记录、${memos.size} 条便签、${reminders.size} 条独立提醒。" +
                 (if (archive.formatVersion < 4) "\n\n这是不含便签的旧版备份，恢复会清空当前便签。" else "") +
-                (if (archive.entries.isEmpty() && archive.memos.isEmpty()) "\n\n这是空备份，恢复后当前列表将被清空。" else "") +
+                (if (archive.formatVersion < 5) "\n\n这是不含独立提醒的旧版备份，恢复会清空当前独立提醒。" else "") +
+                (if (archive.entries.isEmpty() && archive.memos.isEmpty() && archive.reminders.isEmpty()) "\n\n这是空备份，恢复后当前列表将被清空。" else "") +
                 "\n\n替换前会保存本地快照。备份恢复不会合并记录。") },
             confirmButton = { TextButton(onClick = vm::confirmRestore, enabled = !busy) { Text(if (busy) "恢复中" else "确认替换") } },
             dismissButton = { TextButton(onClick = vm::dismissRestore, enabled = !busy) { Text("取消") } })

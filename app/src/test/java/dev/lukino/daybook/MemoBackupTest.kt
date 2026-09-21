@@ -11,7 +11,7 @@ class MemoBackupTest {
         val memo = Memo(body = "突然想到的点子\n明天继续", reminderAt = "2026-09-20T09:00")
         memo.validate()
         val archive = BackupCodec.decode(BackupCodec.encode(emptyList(), memos = listOf(memo)))
-        assertEquals(4, archive.formatVersion)
+        assertEquals(5, archive.formatVersion)
         assertTrue(archive.entries.isEmpty())
         assertEquals(listOf(memo), archive.memos)
         assertEquals("突然想到的点子", memo.summary)

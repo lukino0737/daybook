@@ -46,6 +46,8 @@ sealed interface UiNotice {
 
 class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle, private val backup: BackupService) : ViewModel() {
     val memoEditor = MemoController(repository, saved, viewModelScope)
+    val reminders = repository.reminders.catch { failure.value = "读取提醒失败：${it.localizedMessage}" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val entries = repository.entries.catch { failure.value = "读取失败，请重新打开应用：${it.localizedMessage}" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val selected = saved.getStateFlow("selected", LocalDate.now().toString())

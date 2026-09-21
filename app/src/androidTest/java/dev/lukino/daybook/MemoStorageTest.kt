@@ -26,11 +26,11 @@ class MemoStorageTest {
             assertTrue(repo.all().isEmpty()); assertTrue(repo.allMemos().isEmpty())
             backup.restore(backup.previewSnapshot())
             assertEquals(listOf(entry), repo.all()); assertEquals(listOf(memo), repo.allMemos())
-            try { repo.replaceData(emptyList(), emptyList()) { _, _ -> error("snapshot write failed") }; fail() } catch (_: IllegalStateException) {}
+            try { repo.replaceData(emptyList(), emptyList()) { _, _, _ -> error("snapshot write failed") }; fail() } catch (_: IllegalStateException) {}
             assertEquals(listOf(entry), repo.all()); assertEquals(listOf(memo), repo.allMemos())
             // Failure after entries are deleted must roll back both tables.
             db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_memo BEFORE INSERT ON memos BEGIN SELECT RAISE(ABORT, 'test'); END")
-            try { repo.replaceData(emptyList(), listOf(memo)) { _, _ -> }; fail() } catch (_: android.database.sqlite.SQLiteException) {}
+            try { repo.replaceData(emptyList(), listOf(memo)) { _, _, _ -> }; fail() } catch (_: android.database.sqlite.SQLiteException) {}
             assertEquals(listOf(entry), repo.all()); assertEquals(listOf(memo), repo.allMemos())
         } finally { db.close(); dir.deleteRecursively() }
     }

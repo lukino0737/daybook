@@ -180,3 +180,9 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 真机：本轮未进行鸿蒙6或跨品牌权限/后台实测；既有提醒异常排查仍暂缓。没有开展完整 QA 或扩大 backlog。
 
 - 发布确认：CI环境修复后的[34937365482](https://github.com/lukino0737/daybook/actions/runs/34937365482)全部成功。v0.5.0标签指向cd35b24；远程APK、源码及SHA256SUMS的大小/摘要与本地一致。已正常关闭两个专用模拟器并保留数据。
+
+## v0.6 第一批：规则与数据
+
+2026-09-21：49项JVM、Lint、Debug/AndroidTest构建通过；API35专用模拟器 MigrationTest、StandaloneStorageTest、MemoStorageTest、BackupServiceTest 合计8项通过。涵盖历史增量迁移、缺失日期跳过、固定N天锚点、DST、补发边界、JSON5字段完整性、旧备份及三类数据回滚。初轮设备测试7通过1失败，修复草稿发送字段校验后全组8项通过。
+
+未进行真机验证或正式签名包覆盖升级。本批不发布或交付安装包。
