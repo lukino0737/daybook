@@ -22,6 +22,8 @@ import dev.lukino.daybook.calendar.FestivalCalendar
 import dev.lukino.daybook.calendar.HolidayMark
 import androidx.compose.ui.text.style.TextOverflow
 import dev.lukino.daybook.data.Entry
+import dev.lukino.daybook.data.StandaloneReminder
+import dev.lukino.daybook.reminder.RepeatRules
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
@@ -37,7 +39,7 @@ fun relativeDayLabel(selected: LocalDate, today: LocalDate): String? {
     return when { days > 0 -> "${days}天后"; days < 0 -> "${-days}天前"; else -> null }
 }
 
-@Composable fun MonthCalendar(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onMonth: (YearMonth) -> Unit, onSelect: (LocalDate) -> Unit) {
+@Composable fun MonthCalendar(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onMonth: (YearMonth) -> Unit, onSelect: (LocalDate) -> Unit, reminders: List<StandaloneReminder> = emptyList()) {
     val pager = androidx.compose.foundation.pager.rememberPagerState(
         initialPage = monthPage(month), pageCount = { 9999 * 12 })
     val onMonthChanged by rememberUpdatedState(onMonth)
@@ -56,15 +58,18 @@ fun relativeDayLabel(selected: LocalDate, today: LocalDate): String? {
                 CustomAccessibilityAction("上个月") { scope.launch { pager.animateScrollToPage((pager.settledPage - 1).coerceAtLeast(0)) }; true },
                 CustomAccessibilityAction("下个月") { scope.launch { pager.animateScrollToPage((pager.settledPage + 1).coerceAtMost(pager.pageCount - 1)) }; true })
         }) { page ->
-        MonthGrid(pageMonth(page), selected, today, entries, onSelect)
+        MonthGrid(pageMonth(page), selected, today, entries, onSelect, reminders)
     }
 }
 
 private fun monthPage(month: YearMonth) = (month.year - 1) * 12 + month.monthValue - 1
 private fun pageMonth(page: Int): YearMonth = YearMonth.of(page / 12 + 1, page % 12 + 1)
 
-@Composable private fun MonthGrid(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onSelect: (LocalDate) -> Unit) {
+@Composable private fun MonthGrid(month: YearMonth, selected: LocalDate, today: LocalDate, entries: List<Entry>, onSelect: (LocalDate) -> Unit, reminders: List<StandaloneReminder> = emptyList()) {
     val groups = remember(entries) { entries.groupBy { it.date } }
+    val reminderCounts = remember(reminders, month) {
+        reminders.filter { it.showInCalendar }.flatMap { RepeatRules.dates(it, month.atDay(1), month.atEndOfMonth()) }.groupingBy { it }.eachCount()
+    }
     val notes = remember(month) { monthCells(month).filterNotNull().associateWith(FestivalCalendar::forDate) }
     Column(Modifier.fillMaxWidth()) {
         Text("${month.year}年${month.monthValue}月", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("month-title"))
@@ -78,11 +83,12 @@ private fun pageMonth(page: Int): YearMonth = YearMonth.of(page / 12 + 1, page %
                 week.forEach { date ->
                     val items = groups[date?.toString()].orEmpty()
                     val note = notes[date]
+                    val reminderCount = reminderCounts[date] ?: 0
                     Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = 66.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (date != null && date == selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                         .then(if (date == null) Modifier else Modifier.clickable { onSelect(date) }.testTag("day-$date")
-                            .semantics { contentDescription = "$date，${items.size} 条记录${if (date == today) "，今天" else ""}${note?.description?.takeIf { it.isNotEmpty() }?.let { "，$it" }.orEmpty()}" })
+                            .semantics { contentDescription = "$date，${items.size} 条记录${if (reminderCount > 0) "，$reminderCount 条提醒" else ""}${if (date == today) "，今天" else ""}${note?.description?.takeIf { it.isNotEmpty() }?.let { "，$it" }.orEmpty()}" })
                         .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (date != null) {
                             Box(Modifier.size(30.dp).clip(CircleShape).background(if (date == today) MaterialTheme.colorScheme.primary else Color.Transparent), contentAlignment = Alignment.Center) {
@@ -92,7 +98,7 @@ private fun pageMonth(page: Int): YearMonth = YearMonth.of(page / 12 + 1, page %
                                 fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.height(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                if (items.isNotEmpty()) Box(Modifier.size(4.dp).background(Green, CircleShape).testTag("marker-$date"))
+                                if (items.isNotEmpty() || reminderCount > 0) Box(Modifier.size(4.dp).background(Green, CircleShape).testTag("marker-$date"))
                                 note?.holiday?.let { mark -> Box(Modifier.size(4.dp)
                                     .background(if (mark == HolidayMark.OFF) Color(0xFF287CC1) else Color(0xFFCC4545), CircleShape)
                                     .testTag("holiday-${mark.name}-$date")) }

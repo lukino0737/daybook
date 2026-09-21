@@ -31,6 +31,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.lukino.daybook.data.*
+import dev.lukino.daybook.reminder.*
+import java.time.ZoneId
 import dev.lukino.daybook.calendar.FestivalCalendar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -44,6 +46,10 @@ import androidx.compose.material.icons.outlined.MoreVert
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable fun DaybookScreen(vm: DaybookViewModel) {
     val entries by vm.entries.collectAsStateWithLifecycle()
+    val reminderListVisible by vm.reminderListVisible.collectAsStateWithLifecycle()
+    val reminderListMessage by vm.reminderListMessage.collectAsStateWithLifecycle()
+    val standaloneDraft by vm.standaloneEditor.draft.collectAsStateWithLifecycle()
+    val pendingNotification by vm.pendingNotification.collectAsStateWithLifecycle()
     val reminders by vm.reminders.collectAsStateWithLifecycle()
     val completing by vm.completing.collectAsStateWithLifecycle()
     var completedExpanded by rememberSaveable { mutableStateOf(false) }
@@ -72,6 +78,11 @@ import androidx.compose.material.icons.outlined.MoreVert
     var menu by remember { mutableStateOf(false) }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::previewImport) }
+    LaunchedEffect(draft, memoDraft, standaloneDraft, pendingNotification) {
+        if (draft == null && memoDraft == null && standaloneDraft == null) vm.consumeNotification()
+    }
+    val dayReminders = remember(reminders, selected) { reminders.filter { it.showInCalendar && RepeatRules.occursOn(it, LocalDate.parse(selected)) }.sortedWith(compareBy<StandaloneReminder> { it.time }.thenBy { it.createdAt }.thenBy { it.id }) }
+    val reminderRows = remember(entries, memos, reminders, now) { ReminderListRules.items(entries, memos, reminders, now.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()) }
     val snackbar = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val listDragged by listState.interactionSource.collectIsDraggedAsState()
@@ -123,6 +134,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                     IconButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("backup-menu")) { Icon(Icons.Outlined.MoreVert, "设置与备份") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("外观设置") }, onClick = { menu = false; appearanceSettings = true })
+                        DropdownMenuItem(text = { Text("提醒列表") }, onClick = { menu = false; vm.showReminderList() }, modifier = Modifier.testTag("reminder-list-menu"))
                         DropdownMenuItem(text = { Text("提醒设置") }, onClick = { menu = false; reminderSettings = true })
                         DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.json") })
                         DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
@@ -147,7 +159,7 @@ import androidx.compose.material.icons.outlined.MoreVert
             }
             if (view == "day") {
                 item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
-                    { vm.setMonth(it.toString()) }, vm::select) }
+                    { vm.setMonth(it.toString()) }, vm::select, reminders) }
                 val upcoming = EntryRules.upcoming(entries, now)
                 if (upcoming.isNotEmpty()) {
                     item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +173,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                 Text(when (view) { "tasks" -> "任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge)
                 if (view == "day" && selectedNote.description.isNotEmpty()) Text(selectedNote.description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
-            if (view != "memos" && visible.isEmpty() && (view != "tasks" || completedTasks.isEmpty()) && (view != "review" || applied != null)) item {
+            if (view != "memos" && visible.isEmpty() && (view != "day" || dayReminders.isEmpty()) && (view != "tasks" || completedTasks.isEmpty()) && (view != "review" || applied != null)) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.EditCalendar, null, tint = MaterialTheme.colorScheme.primary)
                     Text(if (view == "day") "这一天，留给你慢慢写。" else if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
@@ -217,6 +229,17 @@ import androidx.compose.material.icons.outlined.MoreVert
                     EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, onTag = vm::openTag)
                 } else EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
             }
+            if (view == "day" && dayReminders.isNotEmpty()) {
+                item { Text("提醒", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("day-reminders-heading")) }
+                items(dayReminders, key = { "day-reminder-${it.id}" }) { reminder ->
+                    Card(onClick = { vm.openReminder(reminder.id) }, modifier = Modifier.fillMaxWidth().testTag("day-reminder-${reminder.id}")) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(reminder.title, style = MaterialTheme.typography.titleMedium)
+                            Text("${reminder.time} · ${RepeatRules.summary(reminder)}${if (!reminder.enabled) " · 已暂停" else ""}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
         }
     }
     }
@@ -230,6 +253,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         }) { Text("确认删除") } },
         dismissButton = { TextButton(onClick = { deleteEntry = null; deleteMemo = null }) { Text("取消") } })
     if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
+    if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow)
     memoDraft?.let { MemoEditor(it, vm.memoEditor) }
     if (confirmAll) AlertDialog(onDismissRequest = vm::dismissReviewConfirmation,
         modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
@@ -237,7 +261,8 @@ import androidx.compose.material.icons.outlined.MoreVert
         dismissButton = { TextButton(onClick = vm::dismissReviewConfirmation) { Text("取消") } })
     if (reminderSettings) ReminderSettingsScreen { reminderSettings = false }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
-        entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags) }
+        entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags, vm::reminderFromEntry) }
+    standaloneDraft?.let { StandaloneReminderEditor(it, vm.standaloneEditor, vm::entryFromReminder) }
     pending?.let { archive ->
         AlertDialog(onDismissRequest = vm::dismissRestore, modifier = Modifier.testTag("restore-dialog"),
             title = { Text(if (restoringSnapshot) "恢复替换前快照？" else "从备份恢复？") },

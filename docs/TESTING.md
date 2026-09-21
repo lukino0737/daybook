@@ -188,3 +188,13 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 未进行真机验证或正式签名包覆盖升级。本批不发布或交付安装包。
 
 2026-09-21 调度与引导：49项JVM和Lint/Debug/AndroidTest通过。API35模拟器7项发送及引导测试通过；外部撤销精确闹钟权限后验证保持待发，恢复后补发，各1项通过；真实重启前seed和重启后verify各1项通过，另由外部驱动先确认通知出现，避免打开App补发掩盖重启调度问题。撤权原同进程测试被系统终止，调整为外部驱动后通过。证据work/v06/m2-acceptance.log。
+
+
+### v0.6 界面与日历验收（2026-09-21）
+
+- JVM共53项通过，失败/错误/跳过均0；Lint 0错误，Debug和AndroidTest构建通过。最终日志m3-final-layout-build.log。
+- API35正常字号19种场景分批通过：StandaloneUiTest 5（类型切换、日历默认/手动优先、暂停、保存/删除失败、通知待办、来源跳转、间隔输入和跨月）、StandaloneNotificationUiTest 1、BackupUiTest 3、InteractionTest 6、TaskListsUiTest/MemoUiTest/ReminderUiTest/MemoNotificationTest各1。
+- m3-normal.log原组合18通过1失败：旧日历删除用例点击删除后未找到确认框。相同用例未改业务代码或测试即在m3-calendar-isolated.log独立通过；最终分区局部调整后m3-calendar-final.log三项通过，包括该旧用例。根因未据此认定，保留初始证据，不能写成首次19项一次全过。
+- 150%字号独立提醒三项交互/失败路径通过（m3-large.log）；最后分区调整后的大字号日历另1项通过（m3-calendar-large-final.log）。截图仅虚构样例，正常/大字号编辑、列表、失败提示和删除确认均经目视检查；截图等待原生窗口动画结束后采集，初期淡入帧不作最终视觉证据。
+- 真实通知PendingIntent打开独立提醒编辑页、重建保留草稿、取消不改原文、已删除目标返回列表均通过。原事项和便签通知跳转回归通过。
+- 本批不交付签名包，不进行正式签名包覆盖升级；真机/鸿蒙专项未执行。鸿蒙可安装仅为用户反馈，不能推导为提醒功能真机验证。

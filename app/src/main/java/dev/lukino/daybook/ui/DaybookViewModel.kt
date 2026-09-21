@@ -46,6 +46,61 @@ sealed interface UiNotice {
 
 class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle, private val backup: BackupService) : ViewModel() {
     val memoEditor = MemoController(repository, saved, viewModelScope)
+    val standaloneEditor = StandaloneReminderController(repository, saved, viewModelScope)
+    val reminderListVisible = saved.getStateFlow("reminder-list-visible", false)
+    val reminderListMessage = saved.getStateFlow<String?>("reminder-list-message", null)
+    val pendingNotification = saved.getStateFlow<String?>("pending-notification", null)
+    fun showReminderList() { saved["reminder-list-visible"] = true; saved["reminder-list-message"] = null }
+    fun hideReminderList() { saved["reminder-list-visible"] = false }
+    fun newReminder() { saved["entry-before-reminder"] = null; standaloneEditor.open() }
+    fun reminderFromEntry() {
+        val draft = saved.get<String>("draft")?.let { Json.decodeFromString<Draft>(it) } ?: return
+        if (draft.id != null || busy.value) return
+        saved["entry-before-reminder"] = Json.encodeToString(draft)
+        standaloneEditor.open(date = draft.date?.let(LocalDate::parse) ?: LocalDate.now(), title = draft.title, note = draft.note)
+        dismissDraft()
+    }
+    fun entryFromReminder(kind: EntryKind) {
+        if (!standaloneEditor.isNew || standaloneEditor.busy.value) return
+        val value = standaloneEditor.current() ?: return
+        val original = saved.get<String>("entry-before-reminder")?.let { Json.decodeFromString<Draft>(it) } ?: Draft()
+        standaloneEditor.dismiss()
+        setDraft(original.copy(kind = kind, title = value.title, note = value.note, date = value.startDate, time = value.time))
+    }
+    fun openReminder(id: String) {
+        viewModelScope.launch {
+            try {
+                val value = repository.allReminders().firstOrNull { it.id == id }
+                if (value != null) standaloneEditor.open(value)
+                else { saved["reminder-list-visible"] = true; saved["reminder-list-message"] = "这条提醒已删除" }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { failure.value = "暂时无法打开提醒，请重试" }
+        }
+    }
+    fun openReminderRow(row: dev.lukino.daybook.reminder.ReminderListItem) {
+        when {
+            row.key.startsWith("reminder:") -> openReminder(row.id)
+            row.key.startsWith("memo:") -> openMemo(row.id)
+            else -> openEntry(row.id)
+        }
+    }
+    fun notification(host: String, id: String) {
+        if (host !in setOf("entry", "memo", "reminder")) return
+        // Preserve an open draft; follow the notification after the user saves or cancels it.
+        saved["pending-notification"] = "$host/$id"
+        consumeNotification()
+    }
+    fun consumeNotification() {
+        if (saved.get<String>("draft") != null || saved.get<String>("memo-draft") != null || standaloneEditor.current() != null) return
+        val target = saved.get<String>("pending-notification") ?: return
+        saved["pending-notification"] = null
+        val id = target.substringAfter('/')
+        when (target.substringBefore('/')) {
+            "entry" -> openEntry(id)
+            "memo" -> openMemo(id)
+            "reminder" -> { showReminderList(); openReminder(id) }
+        }
+    }
     val reminders = repository.reminders.catch { failure.value = "读取提醒失败：${it.localizedMessage}" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val entries = repository.entries.catch { failure.value = "读取失败，请重新打开应用：${it.localizedMessage}" }

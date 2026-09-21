@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter
     onChange: (Draft) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit,
     onDelete: (() -> Unit)?,
     knownTags: List<String> = emptyList(),
+    onNewReminder: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var reminderSettings by rememberSaveable { mutableStateOf(false) }
@@ -56,6 +57,7 @@ import java.time.format.DateTimeFormatter
                                     completed = if (kind == EntryKind.TASK) draft.completed else false))
                             }, label = { Text("${kind.symbol} ${kind.label}") })
                         }
+                        if (draft.id == null && onNewReminder != null) FilterChip(selected = false, enabled = !busy, onClick = onNewReminder, label = { Text("提醒") }, modifier = Modifier.testTag("new-reminder-kind"))
                     }
                     OutlinedTextField(value = draft.title, onValueChange = { if (it.length <= 300) onChange(draft.copy(title = it)) },
                         label = { Text("写点什么") }, modifier = Modifier.fillMaxWidth().testTag("title"), enabled = !busy, maxLines = 4)

@@ -86,4 +86,16 @@ class BackupUiTest {
         compose.waitUntil(5000) { !vm.busy.value }
         assertEquals(1, runBlocking { repo.all().size })
     }
+    @Test fun oldBackupPreviewWarnsBeforeClearingIndependentReminders() {
+        val reminder = StandaloneReminder(title = "需要保留的提醒", startDate = "2026-09-21", time = "09:00", repeat = RepeatKind.DAILY)
+        runBlocking { repo.saveReminder(reminder) }
+        val file = File(dir, "legacy.json").apply { writeText("""{"formatVersion":4,"exportedAt":0,"entries":[],"memos":[]}""") }
+        compose.setContent { DaybookTheme { DaybookScreen(vm) } }
+        compose.runOnIdle { vm.previewImport(Uri.fromFile(file)) }
+        compose.waitUntil(5000) { vm.pendingRestore.value != null && !vm.busy.value }
+        compose.onNodeWithText("恢复会清空当前独立提醒", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("取消").performClick()
+        assertEquals(reminder.id, runBlocking { repo.allReminders().single().id })
+    }
+
 }
