@@ -38,14 +38,20 @@ class EntryRepository(private val database: DaybookDatabase) {
     suspend fun deleteReminder(id: String) = writes.withLock { reminderDao.delete(id) }
 
     // Scheduling and delivery share the write lock: stale notifications cannot race with edits/restores.
-    suspend fun reconcileReminders(deliver: (ReminderTarget) -> Boolean, schedule: (List<ReminderTarget>) -> Unit) = writes.withLock {
+    suspend fun reconcileReminders(deliver: (ReminderTarget) -> Boolean, schedule: (List<ReminderTarget>) -> Unit, now: java.time.Instant = java.time.Instant.now(), zone: java.time.ZoneId = java.time.ZoneId.systemDefault()) = writes.withLock {
         dao.all().forEach { entry ->
             if (deliver(ReminderTarget.from(entry))) dao.save(entry.copy(reminderDeliveredFor = entry.reminderAt))
         }
         memoDao.all().forEach { memo ->
             if (deliver(ReminderTarget.from(memo))) memoDao.save(memo.copy(reminderDeliveredFor = memo.reminderAt))
         }
-        schedule(dao.all().map(ReminderTarget::from) + memoDao.all().map(ReminderTarget::from))
+        reminderDao.all().forEach { reminder ->
+            dev.lukino.daybook.reminder.RepeatRules.due(reminder, now, zone)?.let { due ->
+                if (deliver(ReminderTarget.from(reminder, due))) reminderDao.save(reminder.copy(deliveredFor = due.toString()))
+            }
+        }
+        schedule(dao.all().map(ReminderTarget::from) + memoDao.all().map(ReminderTarget::from) +
+            reminderDao.all().map { ReminderTarget.from(it, dev.lukino.daybook.reminder.RepeatRules.next(it, now, zone)) })
     }
 
     suspend fun allMemos(): List<Memo> = memoDao.all()

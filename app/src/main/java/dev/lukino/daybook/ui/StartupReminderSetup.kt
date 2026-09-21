@@ -23,6 +23,9 @@ internal class ReminderSetupPreferences(context: Context) {
     var notificationRequested: Boolean
         get() = preferences.getBoolean("notification_requested", false)
         set(value) { preferences.edit().putBoolean("notification_requested", value).apply() }
+    var backgroundGuideCompleted: Boolean
+        get() = preferences.getBoolean("background_guide_v06", false)
+        set(value) { preferences.edit().putBoolean("background_guide_v06", value).apply() }
     var guideCompleted: Boolean
         get() = preferences.getBoolean("guide_completed", false)
         set(value) { preferences.edit().putBoolean("guide_completed", value).apply() }
@@ -53,6 +56,7 @@ internal class ReminderSetupPreferences(context: Context) {
     }
     fun finish(openSettings: Boolean) {
         preferences.guideCompleted = true
+        preferences.backgroundGuideCompleted = true
         completed = true
         settings = openSettings
     }
@@ -60,9 +64,28 @@ internal class ReminderSetupPreferences(context: Context) {
         modifier = Modifier.testTag("reminder-setup-guide"),
         onDismissRequest = { finish(false) },
         title = { Text("让提醒按时到达") },
-        text = { Text("请在提醒设置中开启通知与准时提醒，并按手机设置开启自启动和悬浮通知。稍后也可从右上角菜单进入。") },
+        text = { Text("请在提醒设置中开启通知与准时提醒，并开启自启动，将电池策略设为无限制或允许后台运行；悬浮通知可按需开启。稍后也可从右上角菜单进入。") },
         confirmButton = { TextButton(onClick = { finish(true) }, Modifier.testTag("reminder-setup-open")) { Text("去设置") } },
         dismissButton = { TextButton(onClick = { finish(false) }, Modifier.testTag("reminder-setup-skip")) { Text("稍后设置") } }
     )
     if (settings) ReminderSettingsScreen { settings = false }
+}
+
+
+/** Only shown when a returning user actually opens reminder features. No permission request. */
+@Composable fun BackgroundReminderGuide(onSettings: () -> Unit) {
+    val context = LocalContext.current
+    val preferences = remember { ReminderSetupPreferences(context) }
+    var completed by remember { mutableStateOf(preferences.backgroundGuideCompleted) }
+    fun finish(open: Boolean) {
+        preferences.backgroundGuideCompleted = true
+        completed = true
+        if (open) onSettings()
+    }
+    if (!completed && preferences.guideCompleted) AlertDialog(
+        modifier = Modifier.testTag("background-reminder-guide"), onDismissRequest = { finish(false) },
+        title = { Text("检查提醒后台设置") },
+        text = { Text("请开启 Daybook 自启动，并将电池策略设为“无限制”或允许后台运行。各机型名称不同，设置状态请以手机系统为准。") },
+        confirmButton = { TextButton(onClick = { finish(true) }) { Text("去设置") } },
+        dismissButton = { TextButton(onClick = { finish(false) }, modifier = Modifier.testTag("background-guide-skip")) { Text("稍后设置") } })
 }

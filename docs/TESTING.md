@@ -186,3 +186,5 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 2026-09-21：49项JVM、Lint、Debug/AndroidTest构建通过；API35专用模拟器 MigrationTest、StandaloneStorageTest、MemoStorageTest、BackupServiceTest 合计8项通过。涵盖历史增量迁移、缺失日期跳过、固定N天锚点、DST、补发边界、JSON5字段完整性、旧备份及三类数据回滚。初轮设备测试7通过1失败，修复草稿发送字段校验后全组8项通过。
 
 未进行真机验证或正式签名包覆盖升级。本批不发布或交付安装包。
+
+2026-09-21 调度与引导：49项JVM和Lint/Debug/AndroidTest通过。API35模拟器7项发送及引导测试通过；外部撤销精确闹钟权限后验证保持待发，恢复后补发，各1项通过；真实重启前seed和重启后verify各1项通过，另由外部驱动先确认通知出现，避免打开App补发掩盖重启调度问题。撤权原同进程测试被系统终止，调整为外部驱动后通过。证据work/v06/m2-acceptance.log。

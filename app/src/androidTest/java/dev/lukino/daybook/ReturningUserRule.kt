@@ -10,6 +10,7 @@ class ReturningUserRule : ExternalResource() {
         ReminderSetupPreferences(InstrumentationRegistry.getInstrumentation().targetContext).apply {
             notificationRequested = true
             guideCompleted = true
+            backgroundGuideCompleted = true
         }
     }
 }

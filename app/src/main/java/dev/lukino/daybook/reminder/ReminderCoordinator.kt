@@ -32,7 +32,7 @@ class ReminderCoordinator(private val context: Context, private val repository: 
     fun notificationsEnabled(): Boolean = notifications.areNotificationsEnabled() &&
         notifications.getNotificationChannel(CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE
     fun exactEnabled(): Boolean = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
-    fun start() { scope.launch { combine(repository.entries, repository.memos) { _, _ -> Unit }.collect { reconcile() } } }
+    fun start() { scope.launch { combine(repository.entries, repository.memos, repository.reminders) { _, _, _ -> Unit }.collect { reconcile() } } }
     fun refresh() { scope.launch { reconcile() } }
 
     suspend fun reconcile() = lock.withLock {
@@ -45,18 +45,22 @@ class ReminderCoordinator(private val context: Context, private val repository: 
             }, schedule = { entries ->
                 // Remove already-visible notifications for changed/deleted/completed items.
                 notifications.activeNotifications.filter { it.tag != null }.forEach { active ->
-                    val entry = entries.firstOrNull { it.key == active.tag }
-                    if (entry == null || !entry.enabled || entry.at == null ||
-                        active.notification.extras.getString("daybook.reminder") != entry.at ||
-                        active.notification.extras.getLong("daybook.updated") != entry.updatedAt)
-                        notifications.cancel(active.tag, 0)
+                    val extras = active.notification.extras
+                    val source = extras.getString("daybook.source") ?: active.tag
+                    val entry = entries.firstOrNull { it.key == source }
+                    val keep = if (entry?.revision != null) entry.enabled && entry.delivered != null &&
+                        extras.getLong("daybook.revision") == entry.revision &&
+                        extras.getString("daybook.reminder") == entry.delivered
+                    else entry != null && entry.enabled && entry.at != null &&
+                        extras.getString("daybook.reminder") == entry.at && extras.getLong("daybook.updated") == entry.updatedAt
+                    if (!keep) notifications.cancel(active.tag, 0)
                 }
                 val pending = alarmIntent()
                 alarms.cancel(pending)
                 if (ready) entries.filter { it.pending }.map { it.instant(zone) }.filter { it > now }.minOrNull()?.let {
                     alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, it.toEpochMilli(), pending)
                 }
-            })
+            }, now = now, zone = zone)
             failure.value = null
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { failure.value = "提醒调度未完成，请检查权限后重试。记录已保留。" }
@@ -75,13 +79,15 @@ class ReminderCoordinator(private val context: Context, private val repository: 
         val body = entry.description + if (late) " · 补发提醒" else ""
         val extras = android.os.Bundle().apply {
             putString("daybook.reminder", entry.at)
+            putString("daybook.source", entry.key)
+            entry.revision?.let { putLong("daybook.revision", it) }
             putLong("daybook.updated", entry.updatedAt)
         }
         val notification = Notification.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(entry.title).setContentText(body).setContentIntent(pending)
             .setAutoCancel(true).setOnlyAlertOnce(true).setCategory(Notification.CATEGORY_REMINDER)
             .setVisibility(Notification.VISIBILITY_PRIVATE).addExtras(extras).build()
-        notifications.notify(entry.key, 0, notification)
+        notifications.notify(entry.notificationTag, 0, notification)
     }
 
     companion object {

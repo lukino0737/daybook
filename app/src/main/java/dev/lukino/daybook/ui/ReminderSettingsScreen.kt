@@ -40,6 +40,7 @@ import dev.lukino.daybook.reminder.openReminderSettings
     val context = LocalContext.current
     val app = context.applicationContext as DaybookApplication
     val manager = context.getSystemService(NotificationManager::class.java)
+    SideEffect { ReminderSetupPreferences(context).backgroundGuideCompleted = true }
     val background = remember { BackgroundSettingsProfile.forDevice(Build.MANUFACTURER, Build.BRAND) }
     var revision by remember { mutableIntStateOf(0) }
     val state = remember(revision) { app.reminders.notificationsEnabled() to app.reminders.exactEnabled() }
@@ -99,7 +100,13 @@ import dev.lukino.daybook.reminder.openReminderSettings
                             Intent().setComponent(android.content.ComponentName(pkg, activity))
                         }.toTypedArray())
                     }, modifier = Modifier.testTag("autostart-system-settings")) { Text("设置后台运行") }
-                    Text("设置名称因手机而异。省电策略可先保持默认，出现漏提醒时再检查后台限制。", style = MaterialTheme.typography.bodySmall)
+                    Text("设置名称因手机而异。请将电池策略设为“无限制”或允许后台运行，并开启自启动；以上状态请以系统设置为准。", style = MaterialTheme.typography.bodySmall)
+                } }
+                OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("电池与后台限制", style = MaterialTheme.typography.titleMedium)
+                    Text("打开 Daybook 应用详情，在电池或耗电管理中选择无限制、允许后台运行或机型对应选项。系统电池优化豁免与厂商无限制不是同一个开关。", style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { openWithFallback(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) },
+                        modifier = Modifier.testTag("battery-system-settings")) { Text("设置电池策略") }
                 } }
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("悬浮通知", style = MaterialTheme.typography.titleMedium)

@@ -26,6 +26,7 @@ import java.time.LocalTime
             })
         }
         draft.reminderAt?.let { raw ->
+            BackgroundReminderGuide(onSettings)
             val time = LocalDateTime.parse(raw)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = !busy, onClick = {
