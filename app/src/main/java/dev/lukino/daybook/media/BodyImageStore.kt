@@ -21,8 +21,8 @@ class BodyImageStore(private val context: Context) {
     @Synchronized fun release(owner: String) { leases.remove(owner) }
     @Synchronized fun ready() { ready = true }
     fun file(image: BodyImage): File { image.validate(); return File(directory, image.hash) }
-    fun verify(image: BodyImage) {
-        val f = file(image)
+    fun verify(image: BodyImage, f: File = file(image)) {
+        image.validate()
         require(f.isFile && f.length() == image.bytes && digest(f) == image.hash) { "图片缺失或损坏，请检查备份或重新选择" }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(f.path, bounds)

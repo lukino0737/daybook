@@ -76,7 +76,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     var appearanceSettings by rememberSaveable { mutableStateOf(false) }
     var reminderSettings by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(vm::export) }
+    val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let(vm::export) }
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::previewImport) }
     LaunchedEffect(draft, memoDraft, standaloneDraft, pendingNotification) {
         if (draft == null && memoDraft == null && standaloneDraft == null) vm.consumeNotification()
@@ -136,8 +136,8 @@ import androidx.compose.material.icons.outlined.MoreVert
                         DropdownMenuItem(text = { Text("外观设置") }, onClick = { menu = false; appearanceSettings = true })
                         DropdownMenuItem(text = { Text("提醒列表") }, onClick = { menu = false; vm.showReminderList() }, modifier = Modifier.testTag("reminder-list-menu"))
                         DropdownMenuItem(text = { Text("提醒设置") }, onClick = { menu = false; reminderSettings = true })
-                        DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.json") })
-                        DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
+                        DropdownMenuItem(text = { Text("导出备份") }, onClick = { menu = false; exportFile.launch("daybook-backup-${now.toLocalDate()}.zip") })
+                        DropdownMenuItem(text = { Text("从备份恢复") }, onClick = { menu = false; importFile.launch(arrayOf("application/zip", "application/json", "text/plain", "application/octet-stream")) })
                         DropdownMenuItem(text = { Text("恢复替换前快照") }, onClick = { menu = false; vm.previewSnapshot() })
                     }
                 }
@@ -268,9 +268,10 @@ import androidx.compose.material.icons.outlined.MoreVert
             title = { Text(if (restoringSnapshot) "恢复替换前快照？" else "从备份恢复？") },
             text = { Text("备份包含 ${archive.entries.size} 条记录、${archive.memos.size} 条便签、${archive.reminders.size} 条独立提醒，将完整替换当前 ${entries.size} 条记录、${memos.size} 条便签、${reminders.size} 条独立提醒。" +
                 (if (archive.formatVersion < 4) "\n\n这是不含便签的旧版备份，恢复会清空当前便签。" else "") +
+                (if (archive.formatVersion < 6) "\n\n这是不含图片的旧版备份，恢复会移除当前图片；替换前快照仍保留原图片。" else "") +
                 (if (archive.formatVersion < 5) "\n\n这是不含独立提醒的旧版备份，恢复会清空当前独立提醒。" else "") +
                 (if (archive.entries.isEmpty() && archive.memos.isEmpty() && archive.reminders.isEmpty()) "\n\n这是空备份，恢复后当前列表将被清空。" else "") +
-                "\n\n替换前会保存本地快照。备份恢复不会合并记录。") },
+                "\n\n包含 ${archive.imageCount} 张图片，图片体积 ${"%.1f".format(archive.imageBytes / 1048576.0)} MiB。替换前会保存含图片的本地快照。备份恢复不会合并记录。") },
             confirmButton = { TextButton(onClick = vm::confirmRestore, enabled = !busy) { Text(if (busy) "恢复中" else "确认替换") } },
             dismissButton = { TextButton(onClick = vm::dismissRestore, enabled = !busy) { Text("取消") } })
     }

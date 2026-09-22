@@ -219,14 +219,16 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun previewImport(uri: Uri) = runWrite {
         val archive = backup.preview(uri)
         restoringSnapshot.value = false
+        backup.discard(pendingRestore.value)
         pendingRestore.value = archive
     }
     fun previewSnapshot() = runWrite {
         val archive = backup.previewSnapshot()
         restoringSnapshot.value = true
+        backup.discard(pendingRestore.value)
         pendingRestore.value = archive
     }
-    fun dismissRestore() { if (!busy.value) pendingRestore.value = null }
+    fun dismissRestore() { if (!busy.value) { backup.discard(pendingRestore.value); pendingRestore.value = null } }
     fun confirmRestore() = runWrite {
         val archive = pendingRestore.value ?: return@runWrite
         backup.restore(archive)

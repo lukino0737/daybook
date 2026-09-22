@@ -24,6 +24,15 @@ class RichBodyTest {
         assertThrows(IllegalArgumentException::class.java) { RichBody.insert("", blocks, 0, 0, image) }
         assertThrows(IllegalArgumentException::class.java) { Memo().validate() }
     }
+    @Test fun backupPreservesBlockOrderAndRejectsLegacyImageClaims() {
+        val blocks = RichBody.insert("图文", emptyList(), 0, 1, image)
+        val memo = Memo(body = "图文", blocks = blocks)
+        val encoded = dev.lukino.daybook.backup.BackupCodec.encode(emptyList(), memos = listOf(memo))
+        assertEquals(memo, dev.lukino.daybook.backup.BackupCodec.decode(encoded).memos.single())
+        assertThrows(IllegalArgumentException::class.java) {
+            dev.lukino.daybook.backup.BackupCodec.validate(dev.lukino.daybook.backup.BackupArchive(5, 0, emptyList(), listOf(memo)))
+        }
+    }
     @Test fun malformedProjectionAndUnsafeFileNamesAreRejected() {
         val blocks = listOf(BodyBlock("a"), BodyBlock(image = image), BodyBlock("b"))
         assertThrows(IllegalArgumentException::class.java) { RichBody.validate("wrong", blocks) }

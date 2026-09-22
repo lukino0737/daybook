@@ -1,5 +1,7 @@
 package dev.lukino.daybook.backup
 
+import dev.lukino.daybook.data.BodyImage
+import dev.lukino.daybook.data.RichBody
 import dev.lukino.daybook.data.Entry
 import dev.lukino.daybook.data.Memo
 import dev.lukino.daybook.data.StandaloneReminder
@@ -7,7 +9,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
 @Serializable
-data class BackupArchive(val formatVersion: Int, val exportedAt: Long, val entries: List<Entry>, val memos: List<Memo> = emptyList(), val reminders: List<StandaloneReminder> = emptyList())
+data class BackupArchive(val formatVersion: Int, val exportedAt: Long, val entries: List<Entry>, val memos: List<Memo> = emptyList(), val reminders: List<StandaloneReminder> = emptyList(),
+    @kotlinx.serialization.Transient val imageDirectory: String? = null,
+) {
+    val images: List<BodyImage> get() = (entries.flatMap { RichBody.images(it.blocks) } + memos.flatMap { RichBody.images(it.blocks) }).distinctBy { it.hash }
+    val imageCount: Int get() = entries.sumOf { RichBody.images(it.blocks).size } + memos.sumOf { RichBody.images(it.blocks).size }
+    val imageBytes: Long get() = images.sumOf { it.bytes }
+}
 
 object BackupCodec {
     const val MAX_BYTES = 20 * 1024 * 1024
@@ -16,9 +24,8 @@ object BackupCodec {
     private val fields = setOf("id", "kind", "title", "note", "date", "time", "completed", "createdAt", "updatedAt")
 
     fun encode(entries: List<Entry>, exportedAt: Long = System.currentTimeMillis(), memos: List<Memo> = emptyList(), reminders: List<StandaloneReminder> = emptyList()): String {
-        require((entries.flatMap { it.blocks } + memos.flatMap { it.blocks }).isEmpty()) { "图文内容需要完整图片备份" }
-        validate(BackupArchive(5, exportedAt, entries, memos, reminders))
-        return json.encodeToString(BackupArchive(5, exportedAt, entries, memos, reminders)).also {
+        validate(BackupArchive(6, exportedAt, entries, memos, reminders))
+        return json.encodeToString(BackupArchive(6, exportedAt, entries, memos, reminders)).also {
             require(it.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "备份超过 20 MB，请先减少长备注" }
         }
     }
@@ -26,33 +33,42 @@ object BackupCodec {
     fun decode(text: String): BackupArchive {
         require(text.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "备份超过 20 MB" }
         val root = json.parseToJsonElement(text).jsonObject
-        require(root["formatVersion"]?.jsonPrimitive?.intOrNull in 1..5) { "不支持此备份版本" }
+        require(root["formatVersion"]?.jsonPrimitive?.intOrNull in 1..6) { "不支持此备份版本" }
         val entries = root["entries"]?.jsonArray ?: error("备份缺少记录列表")
         require(entries.size <= MAX_ENTRIES) { "备份最多支持 10000 条记录" }
-        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 2..5) entries.forEach {
+        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 2..6) entries.forEach {
             require(it.jsonObject.keys.containsAll(setOf("reminderAt", "reminderDeliveredFor"))) { "备份提醒字段不完整" }
         }
-        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 3..5) entries.forEach {
+        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 3..6) entries.forEach {
             require("tags" in it.jsonObject) { "备份标签字段不完整" }
         }
         entries.forEach { require(it.jsonObject.keys.containsAll(fields)) { "备份记录字段不完整" } }
-        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 4..5) {
+        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 4..6) {
             val memos = root["memos"]?.jsonArray ?: error("备份缺少便签列表")
             memos.forEach { require(it.jsonObject.keys.containsAll(setOf("id", "body", "date", "reminderAt", "reminderDeliveredFor", "createdAt", "updatedAt"))) { "便签字段不完整" } }
         }
-        if (root["formatVersion"]?.jsonPrimitive?.intOrNull == 5) {
+        if (root["formatVersion"]?.jsonPrimitive?.intOrNull in 5..6) {
             val reminders = root["reminders"]?.jsonArray ?: error("备份缺少独立提醒列表")
             val required = setOf("id", "title", "note", "startDate", "time", "repeat", "weekdays", "intervalDays", "enabled", "showInCalendar", "effectiveFrom", "revision", "deliveredFor", "createdAt", "updatedAt")
             reminders.forEach { require(it.jsonObject.keys.containsAll(required)) { "独立提醒字段不完整" } }
+        }
+        if (root["formatVersion"]?.jsonPrimitive?.intOrNull == 6) {
+            (entries + (root["memos"]?.jsonArray ?: JsonArray(emptyList()))).forEach {
+                require("blocks" in it.jsonObject) { "备份缺少图文正文" }
+            }
         }
         return json.decodeFromString<BackupArchive>(text).also(::validate)
     }
 
     fun validate(archive: BackupArchive) {
-        require(archive.formatVersion in 1..5 && archive.exportedAt >= 0) { "备份信息无效" }
+        require(archive.formatVersion in 1..6 && archive.exportedAt >= 0) { "备份信息无效" }
         require(archive.entries.size + archive.memos.size + archive.reminders.size <= MAX_ENTRIES) { "备份最多支持 10000 条记录" }
         require(archive.formatVersion >= 4 || archive.memos.isEmpty()) { "旧版备份不支持便签" }
-        require(archive.formatVersion == 5 || archive.reminders.isEmpty()) { "旧版备份不支持独立提醒" }
+        require(archive.formatVersion >= 5 || archive.reminders.isEmpty()) { "旧版备份不支持独立提醒" }
+        val blocks = archive.entries.flatMap { it.blocks } + archive.memos.flatMap { it.blocks }
+        require(archive.formatVersion >= 6 || blocks.isEmpty()) { "旧版备份不能包含图文正文" }
+        RichBody.images(blocks).groupBy { it.hash }.values.forEach { require(it.distinct().size == 1) { "同一图片的信息不一致" } }
+        require(archive.imageBytes <= 1024L * 1024 * 1024) { "图片备份超过1 GiB" }
         archive.reminders.forEach(StandaloneReminder::validate)
         require(archive.reminders.map { it.id }.toSet().size == archive.reminders.size) { "备份包含重复提醒 ID" }
         archive.memos.forEach(Memo::validate)
