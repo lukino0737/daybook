@@ -298,3 +298,10 @@
 - 构建Debug/AndroidTest/Release、57项JVM与Lint通过（0错误、30项既有警告）；三项API35任务/提醒专项一次通过。图片与独立提醒批次已有验收复用，不重跑完整QA。
 - 真实已发布v0.5 APK基线哈希一致；原签名v0.6覆盖升级通过，Room4→6后全部旧事项与便签字段、现有外观文件哈希和通知渠道保持。seed、verify、正式启动各一项通过，测试只清理自身虚构样例，无卸载/清库。
 - 证据work/v06-release/build.log、targeted.log、upgrade-seed.log、upgrade-verify.log、release-smoke.log、release-verification.json。下一步提交推送、确认CI后发布；v0.5标签/附件保持不变。鸿蒙6及其他品牌真机未验证，长期提醒异常仍暂缓。
+
+## v0.6.0 发布与收尾完成（2026-09-22）
+
+- 发布提交e6818e79dde42395db50df78a578363cd7e98461已推送main，[CI35722090962](https://github.com/lukino0737/daybook/actions/runs/35722090962)成功，标签v0.6.0固定指向该提交。
+- 已公开[Daybook v0.6.0](https://github.com/lukino0737/daybook/releases/tag/v0.6.0)，原签名APK、源码归档和SHA256SUMS三附件大小/哈希与本地逐项一致。草稿按tag查询API曾返回404；公开发布后最终校验全部通过。v0.5标签、正文和原附件ID/大小/哈希均保持不变。
+- APK SHA256：60e6ac10f3115b17a51465931047cae24dfd84b988afb86a9b115aa9781a88ba。源码来自发布提交，最终交接更新仅在main文档中追加，不修改业务或重建APK。
+- 两个专用模拟器字号1.0并正常关闭，数据保留。最终证据work/v06-release/ci-final.json、published-release.json、emulator-stop.log。本轮全部完成，停止开发，等待用户新需求；隐私便签与排序均已取消。
