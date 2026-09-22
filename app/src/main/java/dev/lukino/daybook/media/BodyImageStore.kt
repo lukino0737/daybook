@@ -21,12 +21,17 @@ class BodyImageStore(private val context: Context) {
     @Synchronized fun release(owner: String) { leases.remove(owner) }
     @Synchronized fun ready() { ready = true }
     fun file(image: BodyImage): File { image.validate(); return File(directory, image.hash) }
-    fun verify(image: BodyImage, f: File = file(image)) {
+    fun verify(image: BodyImage, f: File = file(image), decodePixels: Boolean = false) {
         image.validate()
         require(f.isFile && f.length() == image.bytes && digest(f) == image.hash) { "图片缺失或损坏，请检查备份或重新选择" }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(f.path, bounds)
         require(bounds.outWidth == image.width && bounds.outHeight == image.height && bounds.outMimeType == image.mime) { "图片信息不一致" }
+        if (decodePixels) {
+            val decoded = try { decode(f) } catch (e: Exception) { throw IllegalArgumentException("图片内容损坏，无法完整解码", e) }
+            try { require(decoded.width == image.width && decoded.height == image.height) { "图片内容与尺寸不一致" } }
+            finally { decoded.recycle() }
+        }
     }
     @Synchronized fun collect(referenced: List<BodyImage>) {
         if (!ready) return
@@ -43,7 +48,7 @@ class BodyImageStore(private val context: Context) {
             }
             val bitmap = decode(source)
             try {
-                val transparent = bitmap.hasAlpha()
+                val transparent = hasTransparentPixels(bitmap)
                 encoded.outputStream().use {
                     check(bitmap.compress(if (transparent) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, 85, it)) { "图片处理失败" }
                     it.fd.sync()
@@ -78,6 +83,15 @@ class BodyImageStore(private val context: Context) {
             val buffer = ByteArray(32768); var size = 0L
             while (true) { val n = input.read(buffer); if (n < 0) break; size += n; require(size <= limit) { "文件超过允许大小" }; output.write(buffer, 0, n) }
             return size
+        }
+        private fun hasTransparentPixels(bitmap: Bitmap): Boolean {
+            if (!bitmap.hasAlpha()) return false
+            val row = IntArray(bitmap.width)
+            for (y in 0 until bitmap.height) {
+                bitmap.getPixels(row, 0, bitmap.width, 0, y, bitmap.width, 1)
+                if (row.any { it ushr 24 < 255 }) return true
+            }
+            return false
         }
         private fun decode(file: File): Bitmap {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

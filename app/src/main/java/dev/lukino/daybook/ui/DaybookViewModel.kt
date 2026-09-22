@@ -28,10 +28,11 @@ data class Draft(
     val tagsText: String = "",
     val reminderAt: String? = null,
     val reminderDeliveredFor: String? = null,
+    val blocks: List<BodyBlock> = emptyList(),
 ) {
     fun entry(): Entry {
         val now = System.currentTimeMillis()
-        val fresh = Entry(tags = ReviewRules.parseTags(tagsText), kind = kind, title = title.trim(), note = note, date = date, time = time,
+        val fresh = Entry(blocks = blocks, tags = ReviewRules.parseTags(tagsText), kind = kind, title = title.trim(), note = note, date = date, time = time,
             reminderAt = if (kind == EntryKind.NOTE) null else reminderAt,
             reminderDeliveredFor = reminderDeliveredFor.takeIf { kind != EntryKind.NOTE && it == reminderAt },
             completed = kind == EntryKind.TASK && completed, createdAt = createdAt ?: now, updatedAt = maxOf(now, createdAt ?: now))
@@ -45,6 +46,7 @@ sealed interface UiNotice {
 }
 
 class DaybookViewModel(private val repository: EntryRepository, private val saved: SavedStateHandle, private val backup: BackupService) : ViewModel() {
+    val imageEditor = ImageEditorController(repository, viewModelScope)
     val memoEditor = MemoController(repository, saved, viewModelScope)
     val standaloneEditor = StandaloneReminderController(repository, saved, viewModelScope)
     val reminderListVisible = saved.getStateFlow("reminder-list-visible", false)
@@ -55,7 +57,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun newReminder() { saved["entry-before-reminder"] = null; standaloneEditor.open() }
     fun reminderFromEntry() {
         val draft = saved.get<String>("draft")?.let { Json.decodeFromString<Draft>(it) } ?: return
-        if (draft.id != null || busy.value) return
+        if (draft.id != null || busy.value || RichBody.images(draft.blocks).isNotEmpty()) return
         saved["entry-before-reminder"] = Json.encodeToString(draft)
         standaloneEditor.open(date = draft.date?.let(LocalDate::parse) ?: LocalDate.now(), title = draft.title, note = draft.note)
         dismissDraft()
@@ -65,7 +67,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         val value = standaloneEditor.current() ?: return
         val original = saved.get<String>("entry-before-reminder")?.let { Json.decodeFromString<Draft>(it) } ?: Draft()
         standaloneEditor.dismiss()
-        setDraft(original.copy(kind = kind, title = value.title, note = value.note, date = value.startDate, time = value.time))
+        setDraft(original.copy(kind = kind, title = value.title, note = value.note, blocks = emptyList(), date = value.startDate, time = value.time))
     }
     fun openReminder(id: String) {
         viewModelScope.launch {
@@ -154,7 +156,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     fun edit(entry: Entry? = null) {
         if (busy.value) return
         failure.value = null
-        setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.tags.joinToString("，"), it.reminderAt, it.reminderDeliveredFor) }
+        setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.tags.joinToString("，"), it.reminderAt, it.reminderDeliveredFor, it.blocks) }
             ?: when (view.value) {
                 "review" -> Draft(date = selected.value, kind = EntryKind.NOTE)
                 "tasks" -> Draft(date = selected.value, kind = EntryKind.TASK)
@@ -178,8 +180,21 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
             } catch (_: Exception) { failure.value = "暂时无法打开便签，请重试" }
         }
     }
-    fun setDraft(value: Draft) { saved["draft"] = Json.encodeToString(value) }
-    fun dismissDraft() { if (!busy.value) { saved["draft"] = null; failure.value = null } }
+    fun setDraft(value: Draft) {
+        repository.images?.pin("entry-draft", RichBody.images(value.blocks))
+        saved["draft"] = Json.encodeToString(value)
+    }
+    private fun collectImages() { viewModelScope.launch { runCatching { repository.collectImages() } } }
+    fun dismissDraft() { if (!busy.value && !imageEditor.busy.value) {
+        saved["draft"] = null; failure.value = null; repository.images?.release("entry-draft"); collectImages()
+    } }
+    init {
+        val restored = saved.get<String>("draft")?.let { Json.decodeFromString<Draft>(it) }
+        repository.images?.pin("entry-draft", restored?.let { RichBody.images(it.blocks) }.orEmpty())
+        repository.images?.ready()
+        collectImages()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { backup.discardAbandonedPreviews() }
+    }
     fun clearError() { failure.value = null }
 
     fun save() = runWrite {
@@ -187,6 +202,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         val entry = draft.entry()
         repository.save(entry)
         saved["draft"] = null
+        repository.images?.release("entry-draft"); collectImages()
         if (view.value == "day") entry.date?.let { select(LocalDate.parse(it)); setMonth(it.take(7)) } ?: setView("tasks")
         channel.send(UiNotice.Message("已保存"))
     }
@@ -202,18 +218,26 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     }
     fun deleteMemo(memo: Memo) = runWrite {
         repository.deleteMemo(memo.id)
+        collectImages()
         channel.send(UiNotice.Message("已删除便签"))
     }
     fun delete(entry: Entry) = runWrite {
-        repository.delete(entry.id)
+        repository.images?.pin("undo-${entry.id}", RichBody.images(entry.blocks))
+        try { repository.delete(entry.id) }
+        catch (e: Exception) { repository.images?.release("undo-${entry.id}"); throw e }
         saved["draft"] = null
+        repository.images?.release("entry-draft"); collectImages()
         channel.send(UiNotice.Deleted(entry, historyVersion.value))
     }
     fun undoDelete(entry: Entry, expectedVersion: Int) = runWrite {
-        if (expectedVersion != historyVersion.value) return@runWrite
-        repository.save(entry)
-        channel.send(UiNotice.Message("已恢复"))
+        try {
+            if (expectedVersion != historyVersion.value) return@runWrite
+            repository.save(entry)
+            channel.send(UiNotice.Message("已恢复"))
+        } finally { releaseUndo(entry.id) }
     }
+
+    fun releaseUndo(id: String) { repository.images?.release("undo-$id"); collectImages() }
 
     fun export(uri: Uri) = runWrite { backup.export(uri); channel.send(UiNotice.Message("备份已导出")) }
     fun previewImport(uri: Uri) = runWrite {
@@ -240,7 +264,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
     val historyVersion = MutableStateFlow(0)
 
     private fun runWrite(block: suspend () -> Unit) {
-        if (busy.value) return
+        if (busy.value || imageEditor.busy.value || memoEditor.images.busy.value) return
         busy.value = true
         failure.value = null
         viewModelScope.launch {

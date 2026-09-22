@@ -70,6 +70,17 @@ class ImageBackupTest {
             try { backup.preview(Uri.fromFile(file)); fail("must reject $mode") } catch (_: IllegalArgumentException) {}
             assertEquals(listOf(old), repo.allMemos()); store.verify(image)
         }
+        // A matching checksum is insufficient if the supplied image itself is truncated.
+        val damaged = File(dir, "truncated.jpg").apply { writeBytes(store.file(image).readBytes().let { it.copyOf(it.size / 2) }) }
+        val badImage = image.copy(hash = BodyImageStore.digest(damaged), bytes = damaged.length())
+        val badMemo = incoming.copy(blocks = RichBody.insert(incoming.body, emptyList(), 0, 1, badImage))
+        val badZip = File(dir, "truncated.zip")
+        ZipOutputStream(badZip.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("manifest.json")); zip.write(BackupCodec.encode(emptyList(), memos = listOf(badMemo)).toByteArray()); zip.closeEntry()
+            zip.putNextEntry(ZipEntry("images/${badImage.hash}")); zip.write(damaged.readBytes()); zip.closeEntry()
+        }
+        try { backup.preview(Uri.fromFile(badZip)); fail("undecodable image with matching hash") } catch (_: IllegalArgumentException) {}
+        assertEquals(listOf(old), repo.allMemos())
         assertFalse(File(dir, "escape").exists())
         assertTrue(File(dir, "backup-staging").listFiles().orEmpty().isEmpty())
     }

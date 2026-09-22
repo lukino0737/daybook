@@ -99,9 +99,14 @@ import androidx.compose.material.icons.outlined.MoreVert
             when (notice) {
                 is UiNotice.Message -> snackbar.showSnackbar(notice.text)
                 is UiNotice.Deleted -> {
-                    if (notice.historyVersion == vm.historyVersion.value &&
-                        snackbar.showSnackbar("已删除记录", "撤销", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed)
-                        vm.undoDelete(notice.entry, notice.historyVersion)
+                    var undoRequested = false
+                    try {
+                        if (notice.historyVersion == vm.historyVersion.value &&
+                            snackbar.showSnackbar("已删除记录", "撤销", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+                            undoRequested = true
+                            vm.undoDelete(notice.entry, notice.historyVersion)
+                        }
+                    } finally { if (!undoRequested) vm.releaseUndo(notice.entry.id) }
                 }
             }
         }
@@ -261,7 +266,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         dismissButton = { TextButton(onClick = vm::dismissReviewConfirmation) { Text("取消") } })
     if (reminderSettings) ReminderSettingsScreen { reminderSettings = false }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
-        entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags, vm::reminderFromEntry) }
+        entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags, vm::reminderFromEntry, vm.imageEditor) }
     standaloneDraft?.let { StandaloneReminderEditor(it, vm.standaloneEditor, vm::entryFromReminder) }
     pending?.let { archive ->
         AlertDialog(onDismissRequest = vm::dismissRestore, modifier = Modifier.testTag("restore-dialog"),

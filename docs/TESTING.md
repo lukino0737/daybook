@@ -198,3 +198,16 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 150%字号独立提醒三项交互/失败路径通过（m3-large.log）；最后分区调整后的大字号日历另1项通过（m3-calendar-large-final.log）。截图仅虚构样例，正常/大字号编辑、列表、失败提示和删除确认均经目视检查；截图等待原生窗口动画结束后采集，初期淡入帧不作最终视觉证据。
 - 真实通知PendingIntent打开独立提醒编辑页、重建保留草稿、取消不改原文、已删除目标返回列表均通过。原事项和便签通知跳转回归通过。
 - 本批不交付签名包，不进行正式签名包覆盖升级；真机/鸿蒙专项未执行。鸿蒙可安装仅为用户反馈，不能推导为提醒功能真机验证。
+
+## v0.6 第二批：正文内插图（2026-09-22）
+
+- 自动检查：57项JVM测试通过，失败/错误/跳过均0；Debug、AndroidTest和Lint通过。最终构建证据work/v06-images/m3-final-verified-build.log。开发版本仍0.6.0-dev/code7，Room6；没有新增依赖或网络功能。
+- 数据里程碑：API35八项图片存储/历史迁移/事务专项通过（m1-device.log），验证5→6、多行/空行/emoji旧文本、独立副本、透明图片、尺寸限制、缺图拒绝和引用清理。旧版schema和历史迁移继续保留。
+- 备份里程碑：API35八项图片/旧备份/快照/事务专项通过（m2-final-device.log）。ZIP先在隔离目录完整校验，拒绝缺图、错误校验值、非法路径、多余文件；快照包含图片，当前图片清理后仍可恢复。快照写入失败和事务插入失败保留原数据。
+- 补充完整解码验证：ImageBackupTest四项通过（m3-backup-decode.log），包含“文件校验值匹配，但图片内容被截断”的拒绝路径；仅校验摘要与尺寸不视为完整图片校验。
+- 正常字号图文专项：RichBodyUiTest六项、BodyImageStorageTest三项、ImageBackupTest四项分批通过。覆盖三类事项光标插图/查看/移除、前后文字保留、仅图片便签及摘要、自动保存与空白退出、取消选图/取消编辑、九张限制、保存/删除失败保留、草稿状态重建、删除撤销及共享图片保护。原组合13项中12过1失败（m3-normal-initial.log），撤销测试需等待排在前面的“已保存”提示消失，修正等待后该项通过（m3-undo-final.log），不能写成组合一次全过。
+- 真实系统选图：ImagePickerSystemTest一项通过（m3-system-picker-final.log），通过DocumentsUI选择新建的虚构图片，验证自动保存、删除相册原图后本地副本可读、真实Activity重建保留图文和完成退出。该用例使用真实选择器，区别于其他UI用例的ActivityResultRegistry回调替身。
+- 真实选图过程保留失败记录：初期没有完成系统文件页选择，修正为等待DocumentsUI及原生窗口稳定、点击观察到的文件缩略图区域（该节点isClickable=false，不能向上寻找可点击父节点）。随后测试清理重复删除已移除的MediaStore原图触发SecurityException，修正清理后通过。失败日志位于m3-system-picker-*-attempt.log、m3-picker-diagnostic.log等，不计为通过。
+- 受影响旧流程：MemoUiTest一项、InteractionTest六项、BackupUiTest三项、StandaloneNotificationUiTest/MemoNotificationTest/类型切换各一项，共13种场景分批通过。m3-regression.log原组合12过1失败：旧日历删除确认框未出现；同一用例未修改即在m3-picker-diagnostic.log单项通过。此类组合失败在第一批也出现过，不能据独立通过声称根因已解决。
+- 150%字号：三类事项插图/查看/移除及仅图片便签两项通过（m3-large.log）。正常/大字号图文编辑、图片列表摘要和查看器已目视检查。截图仅含虚构样例，见work/v06-images/previews-final/及其中image-previews/；真实选图重建后的最终截图为system-picker-restored.png。选择器返回过程中的过渡帧不作为最终布局证据。
+- 真机与交付限制：未执行鸿蒙6或其他真机专项，未验证正式签名包覆盖升级；API35内部匹配签名QA覆盖安装不能当作正式包升级验收。未公开发布、未交付新安装包、未修改v0.5.0标签或附件。Android8–12未做本批设备专项，既有长期提醒异常继续暂缓。

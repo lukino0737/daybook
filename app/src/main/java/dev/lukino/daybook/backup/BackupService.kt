@@ -50,7 +50,7 @@ class BackupService(context: Context, private val repository: EntryRepository) {
         }
     }
     fun discardAbandonedPreviews() {
-        staging.listFiles()?.filter { it.name.startsWith("preview-") || it.name.startsWith("export-") }?.forEach { it.deleteRecursively() }
+        staging.listFiles()?.filter { (it.name.startsWith("preview-") || it.name.startsWith("export-")) && System.currentTimeMillis() - it.lastModified() > 86_400_000L }?.forEach { it.deleteRecursively() }
     }
     private fun previewStream(input: InputStream): BackupArchive {
         val dir = File(staging, "preview-${UUID.randomUUID()}").apply { check(mkdirs()) { "无法准备备份，请检查可用空间" } }
@@ -79,7 +79,7 @@ class BackupService(context: Context, private val repository: EntryRepository) {
                     require(entry.size == image.bytes) { "图片大小不一致" }
                     val file = File(dir, image.hash)
                     zip.getInputStream(entry).use { inputImage -> file.outputStream().use { BodyImageStore.copyLimited(inputImage, it, image.bytes) } }
-                    images.verify(image, file)
+                    images.verify(image, file, decodePixels = true)
                 }
                 parsed.copy(imageDirectory = dir.path)
             }
@@ -93,7 +93,7 @@ class BackupService(context: Context, private val repository: EntryRepository) {
     }
     suspend fun restore(archive: BackupArchive) = withContext(Dispatchers.IO) {
         BackupCodec.validate(archive)
-        archive.images.forEach { image -> images.verify(image, sourceFor(archive, image)) }
+        archive.images.forEach { image -> images.verify(image, sourceFor(archive, image), decodePixels = true) }
         val owner = "restore-${UUID.randomUUID()}"
         try {
             repository.replaceData(archive.entries, archive.memos, archive.reminders) { previous, previousMemos, previousReminders ->
@@ -120,14 +120,14 @@ class BackupService(context: Context, private val repository: EntryRepository) {
         val manifest = BackupCodec.encode(entries, memos = memos, reminders = reminders)
         val archive = BackupCodec.decode(manifest)
         archive.images.forEach(images::verify)
-        val zip = ZipOutputStream(output)
+        val zip = ZipOutputStream(object : java.io.FilterOutputStream(output) { override fun close() { flush() } })
         zip.putNextEntry(ZipEntry("manifest.json")); zip.write(manifest.toByteArray(Charsets.UTF_8)); zip.closeEntry()
         archive.images.forEach { image ->
             zip.putNextEntry(ZipEntry("images/${image.hash}"))
             images.file(image).inputStream().use { it.copyTo(zip) }; zip.closeEntry()
         }
         // Do not close the underlying AtomicFile stream before finishWrite/fsync.
-        zip.finish(); zip.flush()
+        zip.finish(); zip.close()
     }
     private fun readLimited(stream: InputStream): String {
         val output = java.io.ByteArrayOutputStream()

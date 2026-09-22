@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -26,7 +29,9 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable fun MemoEditor(value: Memo, controller: MemoController) {
-    val busy by controller.busy.collectAsStateWithLifecycle()
+    val saving by controller.busy.collectAsStateWithLifecycle()
+    val importing by controller.images.busy.collectAsStateWithLifecycle()
+    val busy = saving || importing
     val status by controller.status.collectAsStateWithLifecycle()
     val error by controller.error.collectAsStateWithLifecycle()
     val blankExit by controller.confirmBlankExit.collectAsStateWithLifecycle()
@@ -39,18 +44,19 @@ import java.time.LocalDate
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    val focus = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
     Dialog(onDismissRequest = { controller.close() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        LaunchedEffect(value.id) { focus.requestFocus(); keyboard?.show() }
+
+        val view = LocalView.current
+        SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { WindowCompat.getInsetsController(it, view).apply { isAppearanceLightStatusBars = true; isAppearanceLightNavigationBars = true } } }
         Scaffold(Modifier.fillMaxSize().imePadding().testTag("memo-editor"), topBar = {
             TopAppBar(title = { Text("便签") }, navigationIcon = {
                 IconButton(enabled = !busy, onClick = { controller.close() }, modifier = Modifier.testTag("memo-back")) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "返回并保存") }
             }, actions = { TextButton(enabled = !busy, onClick = { controller.close() }, modifier = Modifier.testTag("memo-done")) { Text("完成") } })
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = value.body, onValueChange = { if (it.length <= 20_000) controller.change(value.copy(body = it)) }, enabled = !busy,
-                    placeholder = { Text("记下此刻所想…") }, minLines = 8, modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("memo-body"))
+                RichBodyEditor(value.body, value.blocks, !busy, "memo-body", "正文", controller.images, autoFocus = true) { text, blocks ->
+                    controller.change(value.copy(body = text, blocks = blocks))
+                }
                 Text(status, style = MaterialTheme.typography.bodySmall)
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = { controller.flush() }) { Text("重试保存") } }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -67,14 +73,14 @@ import java.time.LocalDate
             }
         }
         if (blankExit) AlertDialog(onDismissRequest = controller::cancelBlankExit,
-            title = { Text("便签正文已清空") },
+            title = { Text("便签内容已清空") },
             text = { Text("可以保留上次保存的内容并退出，或删除这条便签。") },
             confirmButton = { TextButton(enabled = !busy, onClick = controller::keepSavedAndClose) { Text("保留内容并退出") } },
             dismissButton = {
                 TextButton(enabled = !busy, onClick = { controller.cancelBlankExit(); confirmDelete = true }, modifier = Modifier.testTag("blank-delete")) { Text("删除便签") }
             })
         if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("删除这条便签？") },
-            text = { Text(error ?: "确认后将删除正文、日期及这条便签的提醒。") },
+            text = { Text(error ?: "确认后将删除正文、图片、日期及这条便签的提醒。") },
             confirmButton = { TextButton(enabled = !busy, onClick = { controller.close(true) }) { Text("确认删除") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } })
     }

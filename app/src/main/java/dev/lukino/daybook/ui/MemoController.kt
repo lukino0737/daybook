@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 
 class MemoController(private val repository: EntryRepository, private val saved: SavedStateHandle, private val scope: CoroutineScope) {
+    val images = ImageEditorController(repository, scope)
     private val raw = saved.getStateFlow<String?>("memo-draft", null)
     val draft = raw.map { it?.let { Json.decodeFromString<Memo>(it) } }
         .stateIn(scope, SharingStarted.Eagerly, raw.value?.let { Json.decodeFromString<Memo>(it) })
@@ -20,10 +21,15 @@ class MemoController(private val repository: EntryRepository, private val saved:
     private val writer = Mutex()
     private var job: Job? = null
     private fun current() = raw.value?.let { Json.decodeFromString<Memo>(it) }
+    private fun hasContent(value: Memo) = value.body.isNotBlank() || RichBody.images(value.blocks).isNotEmpty()
+    private fun pin(value: Memo?) { repository.images?.pin("memo-draft", value?.let { RichBody.images(it.blocks) }.orEmpty()) }
+    private fun collectImages() { scope.launch { runCatching { repository.collectImages() } } }
+    init { pin(current()) }
     fun open(memo: Memo? = null) {
-        if (busy.value) return
+        if (busy.value || images.busy.value) return
         scope.launch {
             if (current() != null && !finish(false)) return@launch
+            pin(memo)
             saved["memo-new"] = memo == null
             saved["memo-draft"] = Json.encodeToString(memo ?: Memo())
             status.value = if (memo == null) "输入后自动保存" else "已保存"
@@ -34,6 +40,7 @@ class MemoController(private val repository: EntryRepository, private val saved:
     fun change(value: Memo) {
         if (busy.value) return
         val old = current() ?: return
+        pin(value)
         saved["memo-draft"] = Json.encodeToString(value.copy(updatedAt = maxOf(System.currentTimeMillis(), old.updatedAt + 1),
             reminderDeliveredFor = old.reminderDeliveredFor.takeIf { old.reminderAt == value.reminderAt }))
         flush(300)
@@ -47,7 +54,7 @@ class MemoController(private val repository: EntryRepository, private val saved:
     private suspend fun persist(leaving: Boolean): Boolean {
         val value = current() ?: return true
         return try {
-            if (value.body.isBlank()) {
+            if (!hasContent(value)) {
                 if (leaving && saved.get<Boolean>("memo-new") == true) repository.deleteMemo(value.id)
                 else if (leaving) {
                     error.value = null
@@ -58,6 +65,7 @@ class MemoController(private val repository: EntryRepository, private val saved:
             } else {
                 repository.saveMemo(value)
                 if (current() == value) status.value = "已保存"
+                collectImages()
             }
             error.value = null
             true
@@ -76,14 +84,15 @@ class MemoController(private val repository: EntryRepository, private val saved:
     }
     fun cancelBlankExit() { confirmBlankExit.value = false }
     fun keepSavedAndClose() {
-        if (busy.value) return
+        if (busy.value || images.busy.value) return
         busy.value = true
         scope.launch {
             try {
                 job?.cancelAndJoin()
                 writer.withLock {
-                    if (current()?.body?.isBlank() == true && saved.get<Boolean>("memo-new") != true) {
+                    if (current()?.let { !hasContent(it) } == true && saved.get<Boolean>("memo-new") != true) {
                         saved["memo-draft"] = null
+                        pin(null); collectImages()
                         confirmBlankExit.value = false
                         error.value = null
                     }
@@ -92,10 +101,10 @@ class MemoController(private val repository: EntryRepository, private val saved:
         }
     }
     fun close(remove: Boolean = false) {
-        if (busy.value) return
+        if (busy.value || images.busy.value) return
         busy.value = true
         scope.launch {
-            try { if (finish(remove)) { saved["memo-draft"] = null; confirmBlankExit.value = false } }
+            try { if (finish(remove)) { saved["memo-draft"] = null; pin(null); collectImages(); confirmBlankExit.value = false } }
             finally { busy.value = false }
         }
     }

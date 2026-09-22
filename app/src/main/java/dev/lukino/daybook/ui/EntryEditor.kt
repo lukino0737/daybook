@@ -20,6 +20,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import dev.lukino.daybook.data.EntryKind
+import dev.lukino.daybook.data.RichBody
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -31,7 +32,10 @@ import java.time.format.DateTimeFormatter
     onDelete: (() -> Unit)?,
     knownTags: List<String> = emptyList(),
     onNewReminder: (() -> Unit)? = null,
+    imageController: ImageEditorController? = null,
 ) {
+    val importing by imageController?.busy?.collectAsState() ?: remember { mutableStateOf(false) }
+    val locked = busy || importing
     val context = LocalContext.current
     var reminderSettings by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -39,50 +43,53 @@ import java.time.format.DateTimeFormatter
         val view = LocalView.current
         SideEffect {
             (view.parent as? DialogWindowProvider)?.window?.let {
-                WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = true
+                WindowCompat.getInsetsController(it, view).apply { isAppearanceLightStatusBars = true; isAppearanceLightNavigationBars = true }
             }
         }
         Surface(Modifier.fillMaxSize().testTag("editor-root")) {
             Column(Modifier.safeDrawingPadding().imePadding().padding(horizontal = 20.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = onDismiss, enabled = !busy) { Text("取消") }
+                    TextButton(onClick = onDismiss, enabled = !locked) { Text("取消") }
                     Text(if (draft.id == null) "记一笔" else "编辑记录", Modifier.padding(top = 14.dp), style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = onSave, enabled = !busy && draft.title.isNotBlank(), modifier = Modifier.testTag("save")) { Text(if (busy) "保存中" else "保存") }
+                    TextButton(onClick = onSave, enabled = !locked && draft.title.isNotBlank(), modifier = Modifier.testTag("save")) { Text(if (busy) "保存中" else "保存") }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EntryKind.entries.forEach { kind ->
-                            FilterChip(selected = draft.kind == kind, enabled = !busy, onClick = {
+                            FilterChip(selected = draft.kind == kind, enabled = !locked, onClick = {
                                 onChange(draft.copy(kind = kind, date = draft.date ?: if (kind != EntryKind.TASK) LocalDate.now().toString() else null,
                                     completed = if (kind == EntryKind.TASK) draft.completed else false))
                             }, label = { Text("${kind.symbol} ${kind.label}") })
                         }
-                        if (draft.id == null && onNewReminder != null) FilterChip(selected = false, enabled = !busy, onClick = onNewReminder, label = { Text("提醒") }, modifier = Modifier.testTag("new-reminder-kind"))
+                        if (draft.id == null && onNewReminder != null) FilterChip(selected = false, enabled = !locked && RichBody.images(draft.blocks).isEmpty(), onClick = onNewReminder, label = { Text("提醒") }, modifier = Modifier.testTag("new-reminder-kind"))
                     }
                     OutlinedTextField(value = draft.title, onValueChange = { if (it.length <= 300) onChange(draft.copy(title = it)) },
-                        label = { Text("写点什么") }, modifier = Modifier.fillMaxWidth().testTag("title"), enabled = !busy, maxLines = 4)
+                        label = { Text("写点什么") }, modifier = Modifier.fillMaxWidth().testTag("title"), enabled = !locked, maxLines = 4)
                     Text(if (draft.kind == EntryKind.TASK) "截止日期" else "发生日期", style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(enabled = !busy, onClick = {
+                        OutlinedButton(enabled = !locked, onClick = {
                             val d = draft.date?.let(LocalDate::parse) ?: LocalDate.now()
                             DatePickerDialog(context, { _, y, m, day -> onChange(draft.copy(date = LocalDate.of(y, m + 1, day).toString())) }, d.year, d.monthValue - 1, d.dayOfMonth).show()
                         }) { Text(draft.date ?: "未设截止日期") }
-                        if (draft.kind == EntryKind.TASK && draft.date != null) IconButton(enabled = !busy, modifier = Modifier.testTag("clear-date"), onClick = { onChange(draft.copy(date = null, time = null)) }) { Icon(Icons.Outlined.Close, "清除截止日期") }
+                        if (draft.kind == EntryKind.TASK && draft.date != null) IconButton(enabled = !locked, modifier = Modifier.testTag("clear-date"), onClick = { onChange(draft.copy(date = null, time = null)) }) { Icon(Icons.Outlined.Close, "清除截止日期") }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(enabled = !busy && draft.date != null, onClick = {
+                        OutlinedButton(enabled = !locked && draft.date != null, onClick = {
                             val t = draft.time?.let(LocalTime::parse) ?: LocalTime.of(9, 0)
                             TimePickerDialog(context, { _, h, m -> onChange(draft.copy(time = LocalTime.of(h, m).format(DateTimeFormatter.ofPattern("HH:mm")))) }, t.hour, t.minute, true).show()
                         }) { Text(draft.time ?: "具体时间未定") }
-                        if (draft.time != null) TextButton(enabled = !busy, onClick = { onChange(draft.copy(time = null)) }) { Text("清除时间") }
+                        if (draft.time != null) TextButton(enabled = !locked, onClick = { onChange(draft.copy(time = null)) }) { Text("清除时间") }
                     }
                     if (draft.kind == EntryKind.TASK) Text("只设日期时，当天结束后才算逾期。这里记录的是截止时间。", style = MaterialTheme.typography.bodySmall)
                     TagEditor(draft, busy, knownTags, onChange)
                     if (draft.kind != EntryKind.NOTE) ReminderEditor(draft, busy, onChange) { reminderSettings = true }
-                    OutlinedTextField(value = draft.note, onValueChange = { if (it.length <= 20_000) onChange(draft.copy(note = it)) },
-                        label = { Text(if (draft.kind == EntryKind.NOTE) "今天发生了什么" else "备注 · 链接、地点、细节") }, modifier = Modifier.fillMaxWidth().testTag("note"), enabled = !busy, minLines = 4)
+                    RichBodyEditor(draft.note, draft.blocks, !locked, "note",
+                        if (draft.kind == EntryKind.NOTE) "今天发生了什么" else "备注 · 链接、地点、细节", imageController) { text, blocks ->
+                        onChange(draft.copy(note = text, blocks = blocks))
+                    }
+                    if (draft.id == null && RichBody.images(draft.blocks).isNotEmpty()) Text("独立提醒不支持图片；移除图片后可切换。", style = MaterialTheme.typography.bodySmall)
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    if (onDelete != null) TextButton(onClick = { confirmDelete = true }, enabled = !busy) { Text("删除记录", color = MaterialTheme.colorScheme.error) }
+                    if (onDelete != null) TextButton(onClick = { confirmDelete = true }, enabled = !locked) { Text("删除记录", color = MaterialTheme.colorScheme.error) }
                     Spacer(Modifier.height(24.dp))
                 }
             }
