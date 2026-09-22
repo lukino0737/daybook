@@ -7,9 +7,10 @@ import dev.lukino.daybook.data.EntryRepository
 import dev.lukino.daybook.backup.BackupService
 
 class DaybookApplication : Application() {
-    private val database by lazy { Room.databaseBuilder(this, DaybookDatabase::class.java, "daybook.db").addMigrations(DaybookDatabase.MIGRATION_1_2, DaybookDatabase.MIGRATION_2_3, DaybookDatabase.MIGRATION_3_4, DaybookDatabase.MIGRATION_4_5).build() }
+    private val database by lazy { Room.databaseBuilder(this, DaybookDatabase::class.java, "daybook.db").addMigrations(DaybookDatabase.MIGRATION_1_2, DaybookDatabase.MIGRATION_2_3, DaybookDatabase.MIGRATION_3_4, DaybookDatabase.MIGRATION_4_5, DaybookDatabase.MIGRATION_5_6).build() }
     val appearance by lazy { dev.lukino.daybook.appearance.AppearanceStore(this) }
-    val repository by lazy { EntryRepository(database) }
+    val images by lazy { dev.lukino.daybook.media.BodyImageStore(this) }
+    val repository by lazy { EntryRepository(database, images) }
     val reminders by lazy { dev.lukino.daybook.reminder.ReminderCoordinator(this, repository) }
     override fun onCreate() {
         super.onCreate()

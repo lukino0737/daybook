@@ -25,7 +25,7 @@ class StandaloneStorageTest {
                 execSQL("INSERT INTO memos VALUES ('00000000-0000-0000-0000-000000000606','正文','2026-09-21','2026-09-21T09:00','2026-09-21T09:00',10,20)")
                 close()
             }
-            helper.runMigrationsAndValidate(name, 5, true, DaybookDatabase.MIGRATION_4_5).close()
+            helper.runMigrationsAndValidate(name, 6, true, DaybookDatabase.MIGRATION_4_5, DaybookDatabase.MIGRATION_5_6).close()
             val db = Room.databaseBuilder(context, DaybookDatabase::class.java, name).build()
             try {
                 val repo = EntryRepository(db)

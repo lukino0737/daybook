@@ -6,7 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /** Serialize writes so a restore snapshot and its replacement cannot race with edits. */
-class EntryRepository(private val database: DaybookDatabase) {
+class EntryRepository(private val database: DaybookDatabase, val images: dev.lukino.daybook.media.BodyImageStore? = null) {
     private val writes = Mutex()
     private val dao get() = database.entries()
     val entries = dao.observeAll()
@@ -57,6 +57,7 @@ class EntryRepository(private val database: DaybookDatabase) {
     suspend fun allMemos(): List<Memo> = memoDao.all()
     suspend fun saveMemo(memo: Memo) = writes.withLock {
         memo.validate()
+        verifyImages(memo.blocks)
         val previous = memoDao.get(memo.id)
         // An editor's stale draft must not clear a delivery made while the editor was open.
         val value = memo.copy(reminderDeliveredFor = if (previous?.reminderAt == memo.reminderAt)
@@ -70,14 +71,31 @@ class EntryRepository(private val database: DaybookDatabase) {
         require(reminders.map { it.id }.distinct().size == reminders.size) { "备份包含重复提醒 ID" }
         require(entries.map { it.id }.distinct().size == entries.size && memos.map { it.id }.distinct().size == memos.size) { "备份包含重复 ID" }
         beforeReplace(dao.all(), memoDao.all(), reminderDao.all())
+        (entries.flatMap { it.blocks } + memos.flatMap { it.blocks }).let { verifyImages(it) }
         database.withTransaction {
             dao.clear(); memoDao.clear(); reminderDao.clear()
             dao.insertAll(entries); memoDao.insertAll(memos); reminderDao.insertAll(reminders)
         }
     }
 
+    private suspend fun verifyImages(blocks: List<BodyBlock>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        RichBody.images(blocks).distinctBy { it.hash }.forEach { image ->
+            requireNotNull(images) { "图片存储不可用" }.verify(image)
+        }
+    }
+    suspend fun importImage(uri: android.net.Uri, owner: String): BodyImage = writes.withLock {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { requireNotNull(images).import(uri, owner) }
+    }
+    suspend fun collectImages() = writes.withLock {
+        val referenced = dao.all().flatMap { RichBody.images(it.blocks) } + memoDao.all().flatMap { RichBody.images(it.blocks) }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { images?.collect(referenced) }
+    }
+    suspend fun <T> readSnapshot(block: suspend (List<Entry>, List<Memo>, List<StandaloneReminder>) -> T): T = writes.withLock {
+        block(dao.all(), memoDao.all(), reminderDao.all())
+    }
+
     suspend fun all(): List<Entry> = dao.all()
-    suspend fun save(entry: Entry) = writes.withLock { entry.validate(); dao.save(entry) }
+    suspend fun save(entry: Entry) = writes.withLock { entry.validate(); verifyImages(entry.blocks); dao.save(entry) }
     suspend fun delete(id: String) = writes.withLock { dao.delete(id) }
 
     suspend fun replaceAll(entries: List<Entry>, beforeReplace: suspend (List<Entry>) -> Unit) = writes.withLock {

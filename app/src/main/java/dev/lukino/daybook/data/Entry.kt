@@ -30,8 +30,10 @@ data class Entry(
     @ColumnInfo(defaultValue = "'[]'") val tags: List<String> = emptyList(),
     @ColumnInfo(defaultValue = "NULL") val reminderAt: String? = null,
     @ColumnInfo(defaultValue = "NULL") val reminderDeliveredFor: String? = null,
+    @ColumnInfo(defaultValue = "'[]'") val blocks: List<BodyBlock> = emptyList(),
 ) {
     fun validate() {
+        RichBody.validate(note, blocks)
         require(UUID.fromString(id).toString() == id) { "记录 ID 无效" }
         require(title.isNotBlank() && title.length <= 300) { "标题需为 1–300 个字符" }
         require(tags.size <= 10 && tags.distinct().size == tags.size) { "最多设置 10 个不重复的标签" }

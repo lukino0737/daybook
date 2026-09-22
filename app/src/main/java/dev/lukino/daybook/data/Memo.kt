@@ -1,5 +1,6 @@
 package dev.lukino.daybook.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -16,13 +17,15 @@ data class Memo(
     val reminderDeliveredFor: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
+    @ColumnInfo(defaultValue = "'[]'") val blocks: List<BodyBlock> = emptyList(),
 ) {
-    val summary: String get() = body.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(300).orEmpty()
+    val summary: String get() = body.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(300).orEmpty().ifBlank { if (RichBody.images(blocks).isNotEmpty()) "图片便签 · ${RichBody.images(blocks).size} 张" else "" }
     fun validate() {
-        require(body.isNotBlank() && body.length <= 20_000) { "便签正文需为 1–20000 个字符" }
+        RichBody.validate(body, blocks)
+        require((body.isNotBlank() || RichBody.images(blocks).isNotEmpty()) && body.length <= 20_000) { "便签需要文字或图片，文字最多20000个字符" }
         // Reuse the existing strict ID, local date, minute precision and delivery-state validation.
         Entry(id = id, kind = EntryKind.TASK, title = summary, note = body, date = date,
             reminderAt = reminderAt, reminderDeliveredFor = reminderDeliveredFor,
-            createdAt = createdAt, updatedAt = updatedAt).validate()
+            createdAt = createdAt, updatedAt = updatedAt, blocks = blocks).validate()
     }
 }

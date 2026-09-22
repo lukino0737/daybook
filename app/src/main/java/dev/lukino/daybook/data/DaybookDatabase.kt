@@ -41,13 +41,19 @@ interface StandaloneReminderDao {
     @Query("DELETE FROM reminders") suspend fun clear()
 }
 
-@Database(entities = [Entry::class, Memo::class, StandaloneReminder::class], version = 5, exportSchema = true)
+@Database(entities = [Entry::class, Memo::class, StandaloneReminder::class], version = 6, exportSchema = true)
 @TypeConverters(EntryConverters::class)
 abstract class DaybookDatabase : RoomDatabase() {
     abstract fun entries(): EntryDao
     abstract fun memos(): MemoDao
     abstract fun reminders(): StandaloneReminderDao
     companion object {
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE entries ADD COLUMN blocks TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("ALTER TABLE memos ADD COLUMN blocks TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS reminders (id TEXT NOT NULL, title TEXT NOT NULL, note TEXT NOT NULL, startDate TEXT NOT NULL, time TEXT NOT NULL, repeat TEXT NOT NULL, weekdays INTEGER NOT NULL, intervalDays INTEGER NOT NULL, enabled INTEGER NOT NULL, showInCalendar INTEGER NOT NULL, effectiveFrom INTEGER NOT NULL, revision INTEGER NOT NULL, deliveredFor TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(id))")
@@ -73,6 +79,8 @@ abstract class DaybookDatabase : RoomDatabase() {
 }
 
 class EntryConverters {
+    @TypeConverter fun encodeBlocks(blocks: List<BodyBlock>): String = kotlinx.serialization.json.Json.encodeToString(blocks)
+    @TypeConverter fun decodeBlocks(raw: String): List<BodyBlock> = kotlinx.serialization.json.Json.decodeFromString(raw)
     @TypeConverter fun encodeTags(tags: List<String>): String = kotlinx.serialization.json.Json.encodeToString(tags)
     @TypeConverter fun decodeTags(raw: String): List<String> = kotlinx.serialization.json.Json.decodeFromString(raw)
 }

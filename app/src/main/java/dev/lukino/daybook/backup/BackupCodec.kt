@@ -16,6 +16,7 @@ object BackupCodec {
     private val fields = setOf("id", "kind", "title", "note", "date", "time", "completed", "createdAt", "updatedAt")
 
     fun encode(entries: List<Entry>, exportedAt: Long = System.currentTimeMillis(), memos: List<Memo> = emptyList(), reminders: List<StandaloneReminder> = emptyList()): String {
+        require((entries.flatMap { it.blocks } + memos.flatMap { it.blocks }).isEmpty()) { "图文内容需要完整图片备份" }
         validate(BackupArchive(5, exportedAt, entries, memos, reminders))
         return json.encodeToString(BackupArchive(5, exportedAt, entries, memos, reminders)).also {
             require(it.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "备份超过 20 MB，请先减少长备注" }
