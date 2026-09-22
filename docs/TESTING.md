@@ -211,3 +211,14 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 受影响旧流程：MemoUiTest一项、InteractionTest六项、BackupUiTest三项、StandaloneNotificationUiTest/MemoNotificationTest/类型切换各一项，共13种场景分批通过。m3-regression.log原组合12过1失败：旧日历删除确认框未出现；同一用例未修改即在m3-picker-diagnostic.log单项通过。此类组合失败在第一批也出现过，不能据独立通过声称根因已解决。
 - 150%字号：三类事项插图/查看/移除及仅图片便签两项通过（m3-large.log）。正常/大字号图文编辑、图片列表摘要和查看器已目视检查。截图仅含虚构样例，见work/v06-images/previews-final/及其中image-previews/；真实选图重建后的最终截图为system-picker-restored.png。选择器返回过程中的过渡帧不作为最终布局证据。
 - 真机与交付限制：未执行鸿蒙6或其他真机专项，未验证正式签名包覆盖升级；API35内部匹配签名QA覆盖安装不能当作正式包升级验收。未公开发布、未交付新安装包、未修改v0.5.0标签或附件。Android8–12未做本批设备专项，既有长期提醒异常继续暂缓。
+
+## v0.6.0 正式发布专项（2026-09-22）
+
+用户取消隐私便签并授权发布。版本0.6.0/code7，Room6/ZIP JSON6。
+
+- 构建Debug、AndroidTest和原签名Release成功；57项JVM测试，失败/错误/跳过均0；Lint0错误、30警告。日志work/v06-release/build.log。
+- API35任务专项三项一次通过：任务页默认无截止并保存至正确分区；日历/提醒切换为新任务无截止日期和时间；已有截止日期保留；任务草稿经提醒页返回保留手动日期；原提醒类型切换与日历选择仍有效。日志targeted.log。
+- 专用升级API35模拟器原安装包与outputs/daybook-v0.5.0.apk的SHA256一致，版本0.5.0/code6。与新正式APK签名一致，直接install -r升级至0.6.0/code7。V06UpgradeTest使用平台SQL读取所有旧列作完整快照，校验三类记录、便签所有字段，现有外观文件哈希、通知渠道设置；确认Room4→6及新图片列为空、新提醒表为空。seed与verify各一项通过，SmokeTest正式启动通过。日志upgrade-run.log及对应分项日志。
+- 不卸载、不清库；只新增并清理升级测试自己的虚构记录。真实v0.5→v0.6正式签名升级结果与前述内部QA覆盖安装明确区分。
+- 正文图片和独立提醒的专项结果复用上文，不重复完整QA。既有日历删除组合测试偶发失败及独立通过记录仍保留，本轮不声称解决其根因。
+- 鸿蒙6及各厂商真机未验证，长期提醒异常仍暂缓。

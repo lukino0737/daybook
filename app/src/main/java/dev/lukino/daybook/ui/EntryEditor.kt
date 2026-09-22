@@ -57,7 +57,10 @@ import java.time.format.DateTimeFormatter
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         EntryKind.entries.forEach { kind ->
                             FilterChip(selected = draft.kind == kind, enabled = !locked, onClick = {
-                                onChange(draft.copy(kind = kind, date = draft.date ?: if (kind != EntryKind.TASK) LocalDate.now().toString() else null,
+                                val newTask = draft.id == null && draft.kind != kind && kind == EntryKind.TASK
+                                onChange(draft.copy(kind = kind,
+                                    date = if (newTask) null else draft.date ?: if (kind != EntryKind.TASK) LocalDate.now().toString() else null,
+                                    time = if (newTask) null else draft.time,
                                     completed = if (kind == EntryKind.TASK) draft.completed else false))
                             }, label = { Text("${kind.symbol} ${kind.label}") })
                         }
@@ -70,7 +73,7 @@ import java.time.format.DateTimeFormatter
                         OutlinedButton(enabled = !locked, onClick = {
                             val d = draft.date?.let(LocalDate::parse) ?: LocalDate.now()
                             DatePickerDialog(context, { _, y, m, day -> onChange(draft.copy(date = LocalDate.of(y, m + 1, day).toString())) }, d.year, d.monthValue - 1, d.dayOfMonth).show()
-                        }) { Text(draft.date ?: "未设截止日期") }
+                        }) { Text(draft.date ?: "不设截止日期") }
                         if (draft.kind == EntryKind.TASK && draft.date != null) IconButton(enabled = !locked, modifier = Modifier.testTag("clear-date"), onClick = { onChange(draft.copy(date = null, time = null)) }) { Icon(Icons.Outlined.Close, "清除截止日期") }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -67,7 +67,9 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         val value = standaloneEditor.current() ?: return
         val original = saved.get<String>("entry-before-reminder")?.let { Json.decodeFromString<Draft>(it) } ?: Draft()
         standaloneEditor.dismiss()
-        setDraft(original.copy(kind = kind, title = value.title, note = value.note, blocks = emptyList(), date = value.startDate, time = value.time))
+        setDraft(original.copy(kind = kind, title = value.title, note = value.note, blocks = emptyList(),
+            date = if (kind == EntryKind.TASK) original.date.takeIf { original.kind == EntryKind.TASK } else value.startDate,
+            time = if (kind == EntryKind.TASK) original.time.takeIf { original.kind == EntryKind.TASK } else value.time))
     }
     fun openReminder(id: String) {
         viewModelScope.launch {
@@ -159,7 +161,7 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         setDraft(entry?.let { Draft(it.id, it.title, it.note, it.kind, it.date, it.time, it.completed, it.createdAt, it.tags.joinToString("，"), it.reminderAt, it.reminderDeliveredFor, it.blocks) }
             ?: when (view.value) {
                 "review" -> Draft(date = selected.value, kind = EntryKind.NOTE)
-                "tasks" -> Draft(date = selected.value, kind = EntryKind.TASK)
+                "tasks" -> Draft(kind = EntryKind.TASK)
                 else -> Draft(date = selected.value, kind = defaultCalendarKind(LocalDate.parse(selected.value), LocalDate.now()))
             })
     }
