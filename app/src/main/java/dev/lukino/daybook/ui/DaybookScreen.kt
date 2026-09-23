@@ -44,7 +44,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.outlined.MoreVert
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable fun DaybookScreen(vm: DaybookViewModel) {
+@Composable fun DaybookScreen(vm: DaybookViewModel, ai: dev.lukino.daybook.ai.AiSession? = null) {
+    var aiVisible by rememberSaveable { mutableStateOf(false) }
     val entries by vm.entries.collectAsStateWithLifecycle()
     val reminderListVisible by vm.reminderListVisible.collectAsStateWithLifecycle()
     val reminderListMessage by vm.reminderListMessage.collectAsStateWithLifecycle()
@@ -127,6 +128,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = { TopAppBar(title = { Column { Text("Daybook", style = MaterialTheme.typography.headlineSmall); Text("把日子，记在一起。", style = MaterialTheme.typography.labelMedium) } },
             actions = {
+                if (ai != null) TextButton(onClick = { aiVisible = true }, enabled = !busy, modifier = Modifier.testTag("ai-open")) { Text("AI") }
                 if (view == "day" && (selected != now.toLocalDate().toString() || month != YearMonth.from(now).toString())) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         TextButton(onClick = vm::today, modifier = Modifier.testTag("today")) { Text("今天") }
@@ -257,6 +259,7 @@ import androidx.compose.material.icons.outlined.MoreVert
             deleteEntry = null; deleteMemo = null; openedSwipe = null
         }) { Text("确认删除") } },
         dismissButton = { TextButton(onClick = { deleteEntry = null; deleteMemo = null }) { Text("取消") } })
+    if (aiVisible && ai != null) AiScreen(ai) { aiVisible = false }
     if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
     if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow)
     memoDraft?.let { MemoEditor(it, vm.memoEditor) }
