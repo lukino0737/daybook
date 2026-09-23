@@ -123,6 +123,13 @@ class EntryRepository(private val database: DaybookDatabase, val images: dev.luk
     }
 
     suspend fun all(): List<Entry> = dao.all()
+    suspend fun toggleTask(expected: Entry) = writes.withLock {
+        val current = dao.get(expected.id)
+        require(current != null && current.kind == EntryKind.TASK) { "这条任务已删除或类型已改变" }
+        require(current.copy(reminderDeliveredFor = null) == expected.copy(reminderDeliveredFor = null)) { "任务已变化，请刷新后重试" }
+        val value = current.copy(completed = !current.completed, updatedAt = maxOf(System.currentTimeMillis(), current.updatedAt + 1))
+        value.validate(); dao.save(value)
+    }
     suspend fun save(entry: Entry) = writes.withLock { entry.validate(); verifyImages(entry.blocks); dao.save(entry) }
     suspend fun delete(id: String) = writes.withLock { dao.delete(id) }
 

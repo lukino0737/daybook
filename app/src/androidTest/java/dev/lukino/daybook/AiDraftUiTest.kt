@@ -54,6 +54,7 @@ class AiDraftUiTest {
             compose.onNodeWithTag("ai-messages").performScrollToNode(hasTestTag("ai-draft-task1"))
             compose.onNodeWithText("不设截止日期").assertExists()
             compose.onNodeWithTag("ai-messages").performScrollToNode(hasTestTag("ai-save-preview"))
+            compose.onNodeWithTag("ai-save-preview").performScrollTo()
             InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.let { screenshot ->
                 File(context.getExternalFilesDir(null), "m2-drafts.png").outputStream().use { screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                 screenshot.recycle()

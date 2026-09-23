@@ -58,6 +58,10 @@ class AiReadUiTest {
             compose.waitUntil(5000) { session.state.value.lines.lastOrNull()?.sources?.isNotEmpty() == true }
             val tag = "ai-source-entry:${secret.id}"
             compose.onNodeWithTag("ai-messages").performScrollToNode(hasTestTag(tag))
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.let { bitmap ->
+                java.io.File(context.getExternalFilesDir(null), "ai-sources.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+            }
             compose.onNodeWithTag(tag).performClick()
             assertEquals("entry:${secret.id}", opened)
             compose.onNodeWithTag("ai-input").performTextInput("不要读取我的记录，只聊天")

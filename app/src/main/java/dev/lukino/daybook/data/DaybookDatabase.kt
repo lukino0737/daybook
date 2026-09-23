@@ -13,6 +13,8 @@ interface EntryDao {
     @Query("SELECT * FROM entries ORDER BY createdAt, id")
     suspend fun all(): List<Entry>
 
+    @Query("SELECT * FROM entries WHERE id = :id") suspend fun get(id: String): Entry?
+
     @Upsert suspend fun save(entry: Entry)
     @Insert suspend fun insertAll(entries: List<Entry>)
     @Query("DELETE FROM entries WHERE id = :id") suspend fun delete(id: String)

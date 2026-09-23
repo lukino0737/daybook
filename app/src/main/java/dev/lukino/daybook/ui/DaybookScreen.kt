@@ -53,6 +53,7 @@ import androidx.compose.material.icons.outlined.MoreVert
     val pendingNotification by vm.pendingNotification.collectAsStateWithLifecycle()
     val reminders by vm.reminders.collectAsStateWithLifecycle()
     val completing by vm.completing.collectAsStateWithLifecycle()
+    val toggling by vm.toggling.collectAsStateWithLifecycle()
     var completedExpanded by rememberSaveable { mutableStateOf(false) }
     var openedSwipe by remember { mutableStateOf<String?>(null) }
     var deleteEntry by remember { mutableStateOf<Entry?>(null) }
@@ -173,7 +174,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                         Text("近期截止", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Clay)
                         TextButton(onClick = { vm.setView("tasks") }) { Text("全部任务") }
                     } }
-                    items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
+                    items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
                 }
             }
             if (view != "memos" && (view != "review" || applied != null)) item {
@@ -212,8 +213,8 @@ import androidx.compose.material.icons.outlined.MoreVert
                     if (group.isNotEmpty()) {
                         item { Text(if (dated) "有截止日期" else "无截止日期", style = MaterialTheme.typography.titleSmall) }
                         items(group, key = { it.id }) { entry ->
-                            SwipeDeleteRow(entry.id, openedSwipe, !busy, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
-                                EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
+                            SwipeDeleteRow(entry.id, openedSwipe, !busy && entry.id !in toggling, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
+                                EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
                             }
                         }
                     }
@@ -226,15 +227,15 @@ import androidx.compose.material.icons.outlined.MoreVert
                 if (completedExpanded) {
                     if (completedTasks.isEmpty()) item { Text("还没有已完成任务", style = MaterialTheme.typography.bodyMedium) }
                     items(completedTasks, key = { it.id }) { entry ->
-                        SwipeDeleteRow(entry.id, openedSwipe, !busy, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
-                            EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
+                        SwipeDeleteRow(entry.id, openedSwipe, !busy && entry.id !in toggling, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
+                            EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
                         }
                     }
                 }
             } else items(visible, key = { it.id }) { entry ->
-                if (view == "day") SwipeDeleteRow(entry.id, openedSwipe, !busy, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
-                    EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, onTag = vm::openTag)
-                } else EntryCard(entry, now, busy, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
+                if (view == "day") SwipeDeleteRow(entry.id, openedSwipe, !busy && entry.id !in toggling, { openedSwipe = it }, { deleteEntry = entry }, Modifier.animateItem()) {
+                    EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, onTag = vm::openTag)
+                } else EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag)
             }
             if (view == "day" && dayReminders.isNotEmpty()) {
                 item { Text("提醒", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("day-reminders-heading")) }

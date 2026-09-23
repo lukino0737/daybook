@@ -209,14 +209,21 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         channel.send(UiNotice.Message("已保存"))
     }
     val completing = MutableStateFlow<Set<String>>(emptySet())
-    fun toggle(entry: Entry) = runWrite {
-        if (entry.kind != EntryKind.TASK) return@runWrite
+    val toggling = MutableStateFlow<Set<String>>(emptySet())
+    fun toggle(entry: Entry) {
+        if (entry.kind != EntryKind.TASK || busy.value || imageEditor.busy.value || entry.id in toggling.value) return
+        toggling.value += entry.id
         if (!entry.completed) completing.value += entry.id
-        try {
-            repository.save(entry.copy(completed = !entry.completed, updatedAt = maxOf(System.currentTimeMillis(), entry.updatedAt + 1)))
-            // Persist before the visual pause; leaving the screen must not cancel completion.
-            if (!entry.completed) kotlinx.coroutines.delay(400)
-        } finally { completing.value -= entry.id }
+        failure.value = null
+        viewModelScope.launch {
+            try {
+                repository.toggleTask(entry)
+                // The hold belongs to this row; unrelated cards remain enabled and unchanged.
+                if (!entry.completed) kotlinx.coroutines.delay(400)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { failure.value = e.localizedMessage ?: "任务状态未修改，请重试" }
+            finally { completing.value -= entry.id; toggling.value -= entry.id }
+        }
     }
     fun deleteMemo(memo: Memo) = runWrite {
         repository.deleteMemo(memo.id)
