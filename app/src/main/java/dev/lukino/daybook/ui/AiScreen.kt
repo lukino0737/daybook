@@ -21,13 +21,14 @@ import dev.lukino.daybook.ai.*
 import dev.lukino.daybook.data.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable fun AiScreen(session: AiSession, memos: List<Memo> = emptyList(), onClose: () -> Unit) {
+@Composable fun AiScreen(session: AiSession, memos: List<Memo> = emptyList(), onSource: (AiSource) -> Unit = {}, onClose: () -> Unit) {
     val state by session.state.collectAsStateWithLifecycle()
     var settings by remember { mutableStateOf(false) }
     var clear by remember { mutableStateOf(false) }
     var pickMemo by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<AiDraft?>(null) }
     var confirmSave by remember { mutableStateOf<Boolean?>(null) }
+    var confirmReads by remember { mutableStateOf(false) }
     val messages = rememberLazyListState()
     LaunchedEffect(state.lines.size, state.drafts.size) {
         if (messages.layoutInfo.totalItemsCount > 0) messages.animateScrollToItem(messages.layoutInfo.totalItemsCount - 1)
@@ -46,12 +47,15 @@ import dev.lukino.daybook.data.*
                             onClick = { session.select(model, state.config.thinking) }, label = { Text(model) }) }
                         FilterChip(selected = state.config.thinking, enabled = !state.busy,
                             onClick = { session.select(state.config.model, !state.config.thinking) }, label = { Text("深度思考") })
+                        FilterChip(selected = state.readsEnabled, enabled = !state.busy,
+                            onClick = { confirmReads = true }, label = { Text(if (state.readsEnabled) "按需读取" else "仅聊天") })
                     }
                     Text("对话仅在本次应用会话保留；已保存的事项不受影响。", style = MaterialTheme.typography.labelSmall)
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("ai-messages"), state = messages, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         item {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("帮我记" to "请帮我记录：", "拆解任务" to "请把下面的目标拆成可执行的普通任务，不设截止日期：", "整理文字" to "请将下面的文字整理成便签，保留原意，并提取其中明确的待办：").forEach { (title, text) ->
+                                listOf("帮我记" to "请帮我记录：", "拆解任务" to "请把下面的目标拆成可执行的普通任务，不设截止日期：", "整理文字" to "请将下面的文字整理成便签，保留原意，并提取其中明确的待办：",
+                                    "查找内容" to "请查找我的记录：", "阶段回顾" to "请回顾我本周的日程和任务，说明日期依据与未完成事项，并生成便签草稿。").forEach { (title, text) ->
                                     SuggestionChip(enabled = !state.busy, onClick = { session.input(text) }, label = { Text(title) })
                                 }
                                 SuggestionChip(enabled = !state.busy, onClick = { pickMemo = true }, label = { Text("选择便签") })
@@ -72,6 +76,13 @@ import dev.lukino.daybook.data.*
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(if (line.role == "user") "你" else "Daybook", style = MaterialTheme.typography.labelMedium)
                                     SelectionContainer { Text(line.text) }
+                                    line.scope?.let { Text("本次读取：$it", style = MaterialTheme.typography.labelSmall) }
+                                    if (line.scope != null && line.sources.isEmpty()) Text("所查范围没有匹配记录。", style = MaterialTheme.typography.labelSmall)
+                                    line.sources.forEach { source ->
+                                        TextButton(onClick = { onSource(source) }, enabled = !state.busy, modifier = Modifier.testTag("ai-source-${source.key}")) {
+                                            Text("来源 · ${source.title}", maxLines = 2)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -123,6 +134,10 @@ import dev.lukino.daybook.data.*
         confirmButton = { TextButton(onClick = { session.clear(); clear = false }) { Text("清空并开始") } },
         dismissButton = { TextButton(onClick = { clear = false }) { Text("取消") } })
     if (settings) AiSettingsDialog(session) { settings = false }
+    if (confirmReads) AlertDialog(onDismissRequest = { confirmReads = false }, title = { Text(if (state.readsEnabled) "改为仅聊天？" else "允许按需读取？") },
+        text = { Text("切换会清除当前对话、来源和未保存草稿。开启后，仅在你询问个人事项时查询相关记录；读取的文字会发送到DeepSeek，并展示来源。") },
+        confirmButton = { TextButton(onClick = { session.reads(!state.readsEnabled); confirmReads = false }) { Text("确认切换") } },
+        dismissButton = { TextButton(onClick = { confirmReads = false }) { Text("取消") } })
     if (pickMemo) AlertDialog(onDismissRequest = { pickMemo = false }, title = { Text("选择要整理的便签") }, text = {
         LazyColumn(Modifier.heightIn(max = 360.dp)) {
             item { Text("选择后会展示原文；发送消息时才交给DeepSeek。") }
@@ -175,13 +190,13 @@ import dev.lukino.daybook.data.*
     var thinking by remember { mutableStateOf(state.config.thinking) }
     AlertDialog(onDismissRequest = onClose, title = { Text("DeepSeek 设置") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("消息会发送至DeepSeek并使用你的API额度。密钥加密保存在本机，不进入Daybook备份。")
+            Text("消息和你询问个人事项时按需读取的相关记录会发送至DeepSeek，并使用你的API额度。读取范围会显示，可切换为仅聊天。密钥加密保存在本机，不进入Daybook备份。")
             OutlinedTextField(value = key, onValueChange = { key = it.take(512) }, singleLine = true,
                 visualTransformation = PasswordVisualTransformation(), label = { Text(if (state.config.configured) "新API Key（留空保留）" else "API Key") },
                 modifier = Modifier.testTag("ai-key"))
             AiProtocol.models.forEach { value -> FilterChip(selected = model == value, onClick = { model = value }, label = { Text(value) }) }
             Row { Checkbox(checked = thinking, onCheckedChange = { thinking = it }); Text("默认深度思考") }
-            Row { Checkbox(checked = consent, onCheckedChange = { consent = it }); Text("我同意将本次输入发送至DeepSeek") }
+            Row { Checkbox(checked = consent, onCheckedChange = { consent = it }); Text("我同意发送消息及按需读取的相关记录") }
             if (state.config.configured) {
                 TextButton(onClick = session::checkConnection, enabled = !state.busy) { Text("检查连接（获取模型列表）") }
                 TextButton(onClick = { session.deleteKey(); key = ""; consent = false }, enabled = !state.busy) { Text("删除本机Key") }

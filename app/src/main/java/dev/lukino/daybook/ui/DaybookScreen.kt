@@ -259,7 +259,14 @@ import androidx.compose.material.icons.outlined.MoreVert
             deleteEntry = null; deleteMemo = null; openedSwipe = null
         }) { Text("确认删除") } },
         dismissButton = { TextButton(onClick = { deleteEntry = null; deleteMemo = null }) { Text("取消") } })
-    if (aiVisible && ai != null) AiScreen(ai, memos) { aiVisible = false }
+    if (aiVisible && ai != null) AiScreen(ai, memos, onSource = { source ->
+        aiVisible = false
+        when {
+            source.key.startsWith("entry:") -> vm.openEntry(source.key.substringAfter(':'))
+            source.key.startsWith("memo:") -> vm.openMemo(source.key.substringAfter(':'))
+            source.key.startsWith("reminder:") -> vm.openReminder(source.key.substringAfter(':'))
+        }
+    }) { aiVisible = false }
     if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
     if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow)
     memoDraft?.let { MemoEditor(it, vm.memoEditor) }
