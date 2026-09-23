@@ -330,3 +330,4 @@
 - AI入口与普通多轮聊天接入；Application内存会话支持页面返回、Activity重建，停止和新对话阻止迟到回答写回；失败保留输入，错误不回显服务响应或Key。不长期保存聊天，不读取业务记录，结构化草稿与只读工具留待后续阶段。
 - 61项JVM通过（新增4项）；Debug/AndroidTest构建、Lint通过，0错误31警告。新增UseKtx建议对应显式SharedPreferences.commit，保留返回值检查。API35三项隔离专项全部通过，密钥使用虚构值、聊天使用假服务；普通字号AI页与设置截图已检查。
 - 证据work/v07/m1-final-build.log、m1-install.log、m1-device.log、m1-chat.png、m1-settings.png。未使用真实DeepSeek Key，未验证付费调用/真机/大字号/设备级进程终止。未发布，既有标签与附件不变。
+- 阶段提交498c5ba已推送main，[CI35815229882](https://github.com/lukino0737/daybook/actions/runs/35815229882)成功（work/v07/m1-ci-final.json）。专用模拟器字号1.0正常关闭、保留数据。阶段边界每周额度剩余18%，按用户约定更新交接并停止开启阶段2；完整辅助版尚未完成，下一步为结构化草稿与受控保存，不需重做阶段1。
