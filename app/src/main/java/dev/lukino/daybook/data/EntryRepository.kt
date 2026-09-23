@@ -8,6 +8,33 @@ import kotlinx.coroutines.sync.withLock
 /** Serialize writes so a restore snapshot and its replacement cannot race with edits. */
 class EntryRepository(private val database: DaybookDatabase, val images: dev.lukino.daybook.media.BodyImageStore? = null) {
     private val writes = Mutex()
+    @Volatile var restoreGeneration: Long = 0
+        private set
+    private val confirmedAiBatches = mutableSetOf<String>()
+
+    /** Only preview confirmation may call this; validation and writes share the restore lock. */
+    suspend fun saveAiBatch(token: String, generation: Long, entries: List<Entry>, memos: List<Memo>,
+        replacement: Pair<Memo, Memo>? = null): Boolean = writes.withLock {
+        if (token in confirmedAiBatches) return@withLock false
+        require(generation == restoreGeneration) { "数据已从备份恢复，请重新生成预览" }
+        require(entries.size + memos.size + (if (replacement == null) 0 else 1) in 1..20) { "每批保存1–20条内容" }
+        entries.forEach(Entry::validate); memos.forEach(Memo::validate)
+        require(entries.map { it.id }.distinct().size == entries.size && memos.map { it.id }.distinct().size == memos.size)
+        (entries.flatMap { it.blocks } + memos.flatMap { it.blocks }).let { verifyImages(it) }
+        database.withTransaction {
+            replacement?.let { (expected, updated) ->
+                val actual = memoDao.get(expected.id)
+                require(actual != null && actual.copy(reminderDeliveredFor = null) == expected.copy(reminderDeliveredFor = null)) { "原便签已变化或被删除，请重新选择后整理" }
+                require(updated.id == expected.id && updated.createdAt == expected.createdAt && updated.date == expected.date && updated.reminderAt == expected.reminderAt)
+                require(RichBody.images(expected.blocks).isEmpty() && updated.blocks.isEmpty()) { "含图便签请将整理结果另存，原图文会保留" }
+                updated.validate()
+                memoDao.save(updated.copy(reminderDeliveredFor = actual.reminderDeliveredFor))
+            }
+            dao.insertAll(entries); memoDao.insertAll(memos)
+        }
+        confirmedAiBatches += token
+        true
+    }
     private val dao get() = database.entries()
     val entries = dao.observeAll()
     private val memoDao get() = database.memos()
@@ -76,6 +103,7 @@ class EntryRepository(private val database: DaybookDatabase, val images: dev.luk
             dao.clear(); memoDao.clear(); reminderDao.clear()
             dao.insertAll(entries); memoDao.insertAll(memos); reminderDao.insertAll(reminders)
         }
+        restoreGeneration++
     }
 
     private suspend fun verifyImages(blocks: List<BodyBlock>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -106,5 +134,6 @@ class EntryRepository(private val database: DaybookDatabase, val images: dev.luk
             dao.clear()
             dao.insertAll(entries)
         }
+        restoreGeneration++
     }
 }

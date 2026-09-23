@@ -38,7 +38,7 @@ class AiSessionTest {
         assertFalse(session.state.value.error!!.contains("sensitive"))
         client.failure = false; session.send(); runCurrent()
         assertEquals(4, session.state.value.lines.size)
-        assertEquals(listOf("system", "user", "assistant", "user"), client.inputs.last().map { it.getValue("role").jsonPrimitive.content })
+        assertEquals(listOf("system", "user", "user", "assistant", "user"), client.inputs.last().map { it.getValue("role").jsonPrimitive.content })
     }
     @Test fun stopAndClearRejectLateReplyAndNewSessionHasNoHistory() = runTest {
         val credentials = Credentials(); val client = Client().apply { wait = true }
@@ -47,7 +47,7 @@ class AiSessionTest {
         advanceTimeBy(1001); runCurrent()
         assertTrue(session.state.value.lines.isEmpty()); assertFalse(session.state.value.busy)
         client.wait = false; session.input("新对话"); session.send(); runCurrent()
-        assertEquals(2, client.inputs.last().size)
+        assertEquals(3, client.inputs.last().size)
         assertTrue(AiSession(credentials, client, backgroundScope).state.value.lines.isEmpty())
     }
     @Test fun unavailableKeyDoesNotCallAndModelThinkingAreExplicit() = runTest {
