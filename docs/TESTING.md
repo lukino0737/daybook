@@ -259,3 +259,9 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 正式签名Release与AndroidTest构建通过（work/v07-release/build.log），新APK签名与已发布v0.6.0一致、版本元数据正确（release-verification.json）。
 - 专用5556所安装v0.6.0 APK哈希与原发布产物完全相同，先运行既有UpgradeContinuityTest的extended样例，再直接覆盖正式v0.7 APK；任务/日程所有样例字段、通知渠道保留，样例验证后移除。seed、verify及SmokeTest正式启动各一项通过，证据upgrade-run.log及对应独立日志。没有卸载、降级或清空数据；本次没有宣称核验所有旧记录/图片字段。
 - Room6/ZIP JSON6不变。真实DeepSeek调用及v0.7真机未验证，已在发布说明中明确区分。
+
+### v0.7.0 远程发布核验（2026-09-24）
+
+- 发布提交64d9adb的[CI35819574227](https://github.com/lukino0737/daybook/actions/runs/35819574227)成功；v0.7.0标签精确对应该提交，Release公开、非预发布且为latest。
+- APK、源码ZIP和SHA256清单三附件远程大小及SHA256逐项匹配本地产物。v0.6标签、Release正文、附件ID/大小/哈希均未变。证据work/v07-release/published-release.json、ci-final.json；本轮未重建或重跑QA。
+- 已发布APK与此前交给用户的本地文件完全一致；专用升级模拟器已正常关闭并保留数据。

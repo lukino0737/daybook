@@ -1,14 +1,16 @@
 # Daybook 项目交接
 
-更新：2026-09-23。**v0.7.0已获发布授权，现继续执行发布。用户质疑17%是否不足后，助手复核这是复用成果的有限发布工作，继续必要打包/签名/升级/上传检查，不重跑完整QA。此前在17%直接停止过于机械；不修改一般五小时18%规则，不自动兑换信用。**
+更新：2026-09-24。**v0.7.0/code8已正式发布，CI、原签名覆盖升级、三个远程附件大小/SHA256校验均通过。当前没有待完成的实施或发布工作。真实DeepSeek与v0.7真机效果仍未验证。接手复用已有结果，等待用户反馈或下一步需求，不重复构建/发布。**
 
 ## 当前发布进度（优先读取）
 
 - 实施基线main=fb0cb19；应用代码5512b59的69项JVM、分阶段专项与CI成功，直接复用。
-- 已完成0.7.0/code8正式构建、发布说明和使用文档；签名与v0.6相同，真实已发布v0.6→v0.7同签名覆盖升级及正式启动通过。扩展样例任务/日程字段与通知渠道保留，未卸载清库。证据work/v07-release/build.log、release-verification.json、upgrade-run.log。下一步提交/CI、新Release及三附件哈希校验。
-- 尚未发布，未创建标签。原v0.6及旧版标签/正文/附件保持不变；不降级、卸载或清库。新证据work/v07-release/，旧证据不改。
+- 已完成0.7.0/code8正式构建、发布说明和使用文档；签名与v0.6相同，真实已发布v0.6→v0.7同签名覆盖升级及正式启动通过。扩展样例任务/日程字段与通知渠道保留，未卸载清库。证据work/v07-release/build.log、release-verification.json、upgrade-run.log。
+- 发布提交及标签v0.7.0指向64d9adba371813bf9c6180b6edfae287b9615234；[CI35819574227](https://github.com/lukino0737/daybook/actions/runs/35819574227)成功。[正式Release](https://github.com/lukino0737/daybook/releases/tag/v0.7.0)公开、非预发布、已设为latest。
+- 已上传outputs/daybook-v0.7.0.apk、daybook-v0.7.0-source.zip、SHA256SUMS-v0.7.0.txt；远程三附件大小/SHA256与本地完全一致。APK为12982127字节，SHA256为49b0b2d1f963ea307a6c4148f616b7bb3871e9f44e124a3f4720ef8979180146。源码来自发布提交，不含本机配置、签名材料或产物。
+- 2026-09-23远程操作曾因系统硬额度限制未执行；2026-09-24恢复后只完成远程发布与核验，没有重建或重复升级。原v0.6标签、Release正文及附件ID/大小/哈希均核验不变。证据work/v07-release/ci-final.json、published-release.json、v06-before.json。
 - 真实DeepSeek与v0.7真机效果仍未验证，发布说明明确说明；用户已知该边界并批准发布，不要求Key或付费调用。
-- 后续恢复先核对Git、日志和远程发布状态，从明确步骤续接，不重复发布、不重跑完整QA。
+- 专用5556已在升级后确认字号1.0并正常关闭，数据保留（emulator-stop.log）；5554此前已关闭。后续仅完成记录的文档提交，最新HEAD用git log核对；不要重跑旧seed或降级清库。没有待续发布步骤。
 
 ## 当前目标与授权
 
@@ -34,17 +36,17 @@
 - m4-process-seed.log、m4-process-restart.log分别通过，外部force-stop之间验证进程结束后聊天不恢复。为测试增加专用参数保护，防止普通整类测试共享进程产生干扰；最终m4-process-seed-final.log、m4-process-restart-final.log各一项通过。
 - m4-large.log两项通过；150%字号来源/草稿截图已查看，来源内容、编辑控件可读。保存按钮补充完整滚动截图m4-drafts-large-final.png，m4-large-final.log复验通过。字号已恢复1.0。
 - m4-regression.log五项中四项通过：手动录入/重建、备份快照、图片事务失败保护、图文保存失败恢复。旧ReminderTest取消通知断言在组合运行失败一次，未改用例独立复验m4-reminder-recheck.log通过；根因未查明，不写成首次全过或已修复。
-- 所有AI自动测试使用假服务/虚构内容；未使用真实DeepSeek Key、未做付费生成、v0.7真机测试或正式v0.6→v0.7升级验收。没有重新执行v0.6完整QA。
+- 所有AI自动测试使用假服务/虚构内容；未使用真实DeepSeek Key、未做付费生成或v0.7真机测试。正式v0.6→v0.7升级验收已在发布阶段完成，见顶部；没有重新执行v0.6完整QA。
 
 ## Git与当前关键状态
 
 - main阶段1：498c5ba，CI35815229882成功；阶段2：a1de117，CI35816785245成功；阶段3：cc1ef97，CI35817572296成功。证据m1-ci-final.json、m2-ci-list.json、m3-ci-final.json。
 - 阶段4提交5512b59已推送main：任务按行反馈、进程/界面专项、版本code8和使用/开发/验收文档。[CI35818542035](https://github.com/lukino0737/daybook/actions/runs/35818542035)成功，证据m4-ci-final.json。后续仅完成记录文档提交，最新HEAD用git log核对。
-- 专用模拟器5554已确认字号1.0并正常关闭，证据m4-emulator-stop.log；升级专用5556未动。所有数据保留；切勿运行旧版本升级seed或降级清库。正式v0.6.0仍为e6818e7/code7。
+- 专用模拟器5554和5556均已确认字号1.0并正常关闭，数据保留；5556现为正式v0.7.0。切勿运行旧版本升级seed或降级清库。正式v0.6.0仍为e6818e7/code7，当前最新发布为v0.7.0/code8。
 
 ## 尚未完成、已知限制与恢复建议
 
-1. 实现、本地专项、四阶段CI及模拟器收口均已完成。恢复时先读本交接、AGENTS、Git与已有证据，复用成果；当前新增的已批准工作为v0.7.0发布，按顶部发布交接接续，不重跑完整QA。
+1. 实现、本地专项、CI、正式发布与远程校验均完成。恢复时先读本交接、AGENTS、Git与已有证据，复用成果；等待用户新的需求或试用反馈，不重复构建、完整QA或发布。
 2. 后续用户在AI设置填Key，先检查模型列表，再实际试用普通聊天、跨月日期、多条草稿/修改、便签整理、按需查询/禁读、回顾。默认候选deepseek-flash与deepseek-v4-pro基于2026-09-22官方文档；连接检查不等于生成效果验证，不静默换模型。
 3. 意图门槛是保守规则，含糊表达可能需要明确查询对象/日期；模型理解、响应耗时与费用尚待真实API验证。查询数量/正文有上限，截断和日期口径必须看提示。数据无独立完成时间，不将更新时间冒充完成时间。
 4. Lint31警告：原30项＋密钥同步commit结果检查的UseKtx建议；CI action弃用提示不在本版维护范围。提醒组合用例一次失败见上，保留证据。
@@ -56,7 +58,7 @@
 - 新增ai/AiProtocol.kt、DeepSeekClient.kt、AiSettingsStore.kt、AiSession.kt、AiDraft.kt、AiReads.kt；UI为ui/AiScreen.kt，入口DaybookApplication/MainActivity/DaybookScreen。上述源码根为app/src/main/java/dev/lukino/daybook/。
 - 受控保存与完成：data/EntryRepository.kt、DaybookDatabase.kt、ui/DaybookViewModel.kt。对应Ai*及TaskCompletionTest测试在app/src/test和app/src/androidTest；Room schema不变。
 - 本机证据work/v07/（忽略，不提交）；Git命令加DEVELOPER_DIR=/Library/Developer/CommandLineTools。构建复用work/v04/build.sh，GitHub复用work/github_cli.py，不输出凭据。
-- 专用AVD在work/avd，5554；work/startup-qa/install_test.py仅内部QA同签覆盖安装，不等于发布包。发布产物outputs/v0.6保留不变。
+- 专用AVD在work/avd，5554；升级AVD在work/v04/upgrade-avd，5556。work/startup-qa/install_test.py仅内部QA同签覆盖安装；正式包outputs/daybook-v0.7.0.apk，源码与清单同目录。既有v0.6产物保留不变。
 
 ---
 
