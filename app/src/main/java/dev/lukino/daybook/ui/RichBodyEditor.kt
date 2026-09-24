@@ -108,7 +108,6 @@ import java.util.UUID
             }, modifier = Modifier.testTag("insert-image")) { Text(if (importing) "处理图片…" else "插入图片") }
             Text("${RichBody.images(blocks).size}/9", style = MaterialTheme.typography.bodySmall)
         }
-        Text("在文字光标处插图；每张原图最多20 MiB，保存压缩副本。", style = MaterialTheme.typography.bodySmall)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("image-error")) }
     }
     removeIndex?.let { index ->
@@ -124,6 +123,27 @@ import java.util.UUID
     viewing?.let { index ->
         val images = RichBody.images(blocks)
         if (images.isNotEmpty()) ImageViewer(images, index.coerceIn(images.indices), controller?.store) { viewing = null }
+    }
+}
+
+/** Read-only body using the same image decoding and zoom viewer as the editor. */
+@Composable fun RichBodyPreview(text: String, blocks: List<BodyBlock>, store: BodyImageStore?) {
+    val body = RichBody.effective(text, blocks)
+    val images = RichBody.images(blocks)
+    var viewing by rememberSaveable { mutableStateOf<Int?>(null) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        body.forEachIndexed { index, block ->
+            if (block.image == null) {
+                if (block.text.isNotBlank()) Text(block.text, style = MaterialTheme.typography.bodyLarge)
+            } else {
+                val ordinal = body.take(index).count { it.image != null }
+                BodyImageView(block.image, store, Modifier.fillMaxWidth().height(240.dp)
+                    .testTag("detail-image-$ordinal").clickable { viewing = ordinal }, 1080)
+            }
+        }
+    }
+    viewing?.let { index ->
+        if (images.isNotEmpty()) ImageViewer(images, index.coerceIn(images.indices), store) { viewing = null }
     }
 }
 

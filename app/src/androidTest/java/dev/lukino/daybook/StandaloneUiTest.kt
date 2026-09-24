@@ -155,13 +155,15 @@ class StandaloneUiTest {
         compose.runOnIdle { vm.notification("reminder", r.id) }
         compose.onNodeWithTag("standalone-title").assertTextContains("保留当前草稿")
         compose.onNodeWithTag("standalone-save").performClick()
+        compose.waitUntil(5000) { vm.notificationDetail.value?.reminder?.id == r.id }
+        compose.onNodeWithTag("detail-edit").performClick()
         compose.waitUntil(5000) { vm.standaloneEditor.draft.value?.id == r.id }
         compose.onNodeWithTag("standalone-title").assertTextContains(r.title)
         assertTrue(runBlocking { repo.allReminders().any { it.title == "保留当前草稿" } })
         compose.onNodeWithTag("standalone-cancel").performClick(); closed()
         runBlocking { repo.deleteReminder(r.id) }
         compose.runOnIdle { vm.notification("reminder", r.id) }
-        compose.onNodeWithTag("reminder-list-message").assertTextContains("已删除", substring = true)
+        compose.onNodeWithTag("detail-missing").assertTextContains("已删除", substring = true)
     }
     @Test fun intervalInputRoundTripsAndCalendarUsesEachViewedMonth() {
         screen(); list(); compose.onNodeWithTag("reminder-list-add").performClick()

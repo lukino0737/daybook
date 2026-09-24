@@ -265,3 +265,14 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 发布提交64d9adb的[CI35819574227](https://github.com/lukino0737/daybook/actions/runs/35819574227)成功；v0.7.0标签精确对应该提交，Release公开、非预发布且为latest。
 - APK、源码ZIP和SHA256清单三附件远程大小及SHA256逐项匹配本地产物。v0.6标签、Release正文、附件ID/大小/哈希均未变。证据work/v07-release/published-release.json、ci-final.json；本轮未重建或重跑QA。
 - 已发布APK与此前交给用户的本地文件完全一致；专用升级模拟器已正常关闭并保留数据。
+
+## v0.7.1 专项（2026-09-24）
+
+- 最终构建Debug/Release/AndroidTest通过；69项JVM失败/错误/跳过均0；Lint0错误31警告。证据work/v071/build-final.log。
+- API35最终普通字号9项通过：NotificationDetailUiTest四项、NotificationRoutingTest两项、StandaloneUiTest通知草稿保护一项、TaskListsUiTest两项。验证只读不写入、图文及缩放、编辑保存/取消返回最新详情、已删除内容禁用编辑、三类草稿保护、日历任务仅近期截止及任务页保留。
+- 路由验证包含通知URI首次Activity启动、onNewIntent、Activity重建、草稿跨重建、退出后不重复打开，以及实际已发通知的PendingIntent从后台打开详情；不是物理设备通知栏手指点击验收。
+- 150%字号四项详情/日历专项通过；普通和大字号三种详情截图已查看，编辑按钮、正文、图片、重复规则可读；字号恢复1.0。
+- 首轮7项6过1失败为测试匹配同一文字的底层卡片和详情；限定详情作用域后复验通过。最终证据candidate-normal.log（9项）、candidate-large.log（4项），早期日志保留。未重跑历史完整QA。
+- 真实DeepSeek及v0.7系列真机效果仍未验证；历史偶发用例边界保持原记录。
+
+- 正式升级：5556安装基线APK哈希与已发布v0.7.0一致，签名匹配后覆盖v0.7.1/code9；extended任务/日程样例全部字段、通知渠道保留，seed/verify/Smoke各一项通过，无卸载或清库。证据work/v071-release/upgrade-run.log、release-verification.json。仅验证API35专用模拟器及样例。

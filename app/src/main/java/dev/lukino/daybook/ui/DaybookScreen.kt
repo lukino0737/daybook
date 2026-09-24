@@ -51,6 +51,9 @@ import androidx.compose.material.icons.outlined.MoreVert
     val reminderListMessage by vm.reminderListMessage.collectAsStateWithLifecycle()
     val standaloneDraft by vm.standaloneEditor.draft.collectAsStateWithLifecycle()
     val pendingNotification by vm.pendingNotification.collectAsStateWithLifecycle()
+    val detailTarget by vm.detailTarget.collectAsStateWithLifecycle()
+    val notificationDetail by vm.notificationDetail.collectAsStateWithLifecycle()
+    val calendarEntries = remember(entries) { entries.filter { it.kind != EntryKind.TASK } }
     val reminders by vm.reminders.collectAsStateWithLifecycle()
     val completing by vm.completing.collectAsStateWithLifecycle()
     val toggling by vm.toggling.collectAsStateWithLifecycle()
@@ -121,7 +124,7 @@ import androidx.compose.material.icons.outlined.MoreVert
         "memos" -> emptyList()
         "review" -> applied?.let { ReviewRules.filter(entries, it) }.orEmpty()
         "tasks" -> entries.filter { it.kind == EntryKind.TASK && (!it.completed || it.id in completing) }.sortedWith(compareBy<Entry> { it.date ?: "9999-12-31" }.thenBy { it.time ?: "24:00" })
-        else -> EntryRules.forDay(entries, LocalDate.parse(selected))
+        else -> EntryRules.forDay(calendarEntries, LocalDate.parse(selected))
     }
     Box(Modifier.fillMaxSize()) {
     AppearanceBackground(LocalAppearance.current)
@@ -166,7 +169,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                 ReviewFilters(selection, knownTags, reviewError, vm::setReview, { vm.applyReview() }, vm::resetReview)
             }
             if (view == "day") {
-                item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), entries,
+                item { MonthCalendar(YearMonth.parse(month), LocalDate.parse(selected), now.toLocalDate(), calendarEntries,
                     { vm.setMonth(it.toString()) }, vm::select, reminders) }
                 val upcoming = EntryRules.upcoming(entries, now)
                 if (upcoming.isNotEmpty()) {
@@ -188,7 +191,7 @@ import androidx.compose.material.icons.outlined.MoreVert
                     Text(when (view) {
                         "tasks" -> "任务按截止日期分组，完成后可在下方查看或恢复。"
                         "review" -> "试试清除搜索或标签，或切换到全部类型。"
-                        else -> "日程、截止任务和生活片段，都可以记在这里。"
+                        else -> "日程和生活片段，都可以记在这里。"
                     }, style = MaterialTheme.typography.bodyMedium)
                 } }
             }
@@ -270,12 +273,15 @@ import androidx.compose.material.icons.outlined.MoreVert
     }) { aiVisible = false }
     if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
     if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow)
-    memoDraft?.let { MemoEditor(it, vm.memoEditor) }
     if (confirmAll) AlertDialog(onDismissRequest = vm::dismissReviewConfirmation,
         modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
         confirmButton = { TextButton(onClick = { vm.applyReview(true) }) { Text("确定") } },
         dismissButton = { TextButton(onClick = vm::dismissReviewConfirmation) { Text("取消") } })
     if (reminderSettings) ReminderSettingsScreen { reminderSettings = false }
+    detailTarget?.let { target ->
+        key(target) { NotificationDetailScreen(notificationDetail?.takeIf { it.target == target }, now, vm.imageEditor.store, vm::closeDetail, vm::editDetail) }
+    }
+    memoDraft?.let { MemoEditor(it, vm.memoEditor) }
     draft?.let { value -> EntryEditor(value, busy, error, vm::setDraft, vm::save, vm::dismissDraft,
         entries.firstOrNull { it.id == value.id }?.let { entry -> { vm.delete(entry) } }, knownTags, vm::reminderFromEntry, vm.imageEditor) }
     standaloneDraft?.let { StandaloneReminderEditor(it, vm.standaloneEditor, vm::entryFromReminder) }

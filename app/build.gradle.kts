@@ -20,8 +20,8 @@ android {
         applicationId = "dev.lukino.daybook"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.7.0"
+        versionCode = 9
+        versionName = "0.7.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

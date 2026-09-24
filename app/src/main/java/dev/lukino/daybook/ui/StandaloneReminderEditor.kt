@@ -91,7 +91,6 @@ import java.time.format.DateTimeFormatter
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("显示在日历", modifier = Modifier.weight(1f)); Switch(value.showInCalendar, controller::setCalendar, enabled = !busy, modifier = Modifier.testTag("standalone-calendar"))
                 }
-                Text("暂停只停止通知；日历显示由上方开关控制。", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value.note, { if (it.length <= 20_000) controller.change(value.copy(note = it)) }, enabled = !busy,
                     label = { Text("备注") }, minLines = 3, modifier = Modifier.fillMaxWidth().testTag("standalone-note"))
                 TextButton(onClick = { settings = true }) { Text("提醒设置") }

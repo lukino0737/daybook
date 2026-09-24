@@ -94,15 +94,44 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
         saved["pending-notification"] = "$host/$id"
         consumeNotification()
     }
+    private fun hasOpenDraft() = saved.get<String>("draft") != null ||
+        saved.get<String>("memo-draft") != null || standaloneEditor.current() != null
+    val detailTarget = saved.getStateFlow<String?>("notification-detail", null)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val notificationDetail = detailTarget.flatMapLatest { target ->
+        if (target == null) flowOf(null)
+        else combine(repository.entries, repository.memos, repository.reminders) { entries, memos, reminders ->
+            val id = target.substringAfter('/')
+            NotificationDetail(target, entry = entries.firstOrNull { target.startsWith("entry/") && it.id == id },
+                memo = memos.firstOrNull { target.startsWith("memo/") && it.id == id },
+                reminder = reminders.firstOrNull { target.startsWith("reminder/") && it.id == id })
+        }.catch { emit(NotificationDetail(target, error = "暂时无法读取内容，请返回后重试")) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    fun closeDetail() { saved["notification-detail"] = null }
     fun consumeNotification() {
-        if (saved.get<String>("draft") != null || saved.get<String>("memo-draft") != null || standaloneEditor.current() != null) return
+        if (hasOpenDraft()) return
         val target = saved.get<String>("pending-notification") ?: return
         saved["pending-notification"] = null
-        val id = target.substringAfter('/')
-        when (target.substringBefore('/')) {
-            "entry" -> openEntry(id)
-            "memo" -> openMemo(id)
-            "reminder" -> { showReminderList(); openReminder(id) }
+        saved["notification-detail"] = target
+    }
+    fun editDetail() {
+        val target = detailTarget.value ?: return
+        if (hasOpenDraft() || busy.value) return
+        viewModelScope.launch {
+            try {
+                val id = target.substringAfter('/')
+                val entry = if (target.startsWith("entry/")) repository.all().firstOrNull { it.id == id } else null
+                val memo = if (target.startsWith("memo/")) repository.allMemos().firstOrNull { it.id == id } else null
+                val reminder = if (target.startsWith("reminder/")) repository.allReminders().firstOrNull { it.id == id } else null
+                if (detailTarget.value != target || hasOpenDraft() || busy.value) return@launch
+                when {
+                    entry != null -> edit(entry)
+                    memo != null -> memoEditor.open(memo)
+                    reminder != null -> standaloneEditor.open(reminder)
+                    else -> channel.send(UiNotice.Message("这条内容已删除"))
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { failure.value = "暂时无法打开编辑，请重试" }
         }
     }
     val reminders = repository.reminders.catch { failure.value = "读取提醒失败：${it.localizedMessage}" }
