@@ -37,7 +37,7 @@
 
 ## 安装与上手
 
-[下载 v0.7.0](https://github.com/lukino0737/daybook/releases/tag/v0.7.0) · [使用说明](docs/USAGE.md) · [构建方法](docs/BUILD.md)
+[下载 v0.7.1](https://github.com/lukino0737/daybook/releases/tag/v0.7.1) · [使用说明](docs/USAGE.md) · [构建方法](docs/BUILD.md)
 
 将 APK 下载到 Android 8.0+ 手机安装。旧版用户先导出备份，再直接覆盖安装，勿先卸载。首次打开没有预填数据。点日期再点右下角「+」；右上角菜单可以导出或恢复备份。
 

@@ -392,6 +392,12 @@
 - 任务从日历标记与当天列表移除，仅保留近期截止；任务页、提醒调度与回顾不变。删除两处说明文案，保留图片能力和提醒开关语义。
 - 版本0.7.1/code9，Room6/ZIP JSON6不变，无新依赖。69项JVM、构建、Lint（0错误31警告）通过；API35最终9项普通字号、4项150%字号专项通过，三种详情截图已检查，字号已恢复。
 - 首轮7项中1项因测试同时匹配底层卡片和详情文本失败；限定选择器范围后复验通过。最终证据work/v071/build-final.log、candidate-normal.log、candidate-large.log和previews-final/。
-- 正式v0.7.0→v0.7.1同签名覆盖升级及启动通过；CI与远程发布校验尚待完成。真实DeepSeek和真机效果未验证。
+- 正式v0.7.0→v0.7.1同签名覆盖升级及启动通过；CI与远程发布校验均已完成。真实DeepSeek和真机效果未验证。
 
 - 正式升级：5556安装基线APK哈希与已发布v0.7.0一致，签名匹配后覆盖v0.7.1/code9；extended任务/日程样例全部字段、通知渠道保留，seed/verify/Smoke各一项通过，无卸载或清库。证据work/v071-release/upgrade-run.log、release-verification.json。仅验证API35专用模拟器及样例。
+
+### v0.7.1 发布完成与交付授权（2026-09-24）
+
+- 发布提交dc2922972dfdd1c6a788baa54493d49e321f97bb的[CI35945001582](https://github.com/lukino0737/daybook/actions/runs/35945001582)成功；[v0.7.1 Release](https://github.com/lukino0737/daybook/releases/tag/v0.7.1)已公开、非预发布且为latest。APK、该提交源码ZIP、SHA256清单三附件大小和摘要匹配本地；原v0.7.0标签、说明和附件保持不变。
+- 用户随后要求继续发布时，低成本只读复核latest及三附件摘要，确认发布实际已完成，未重建、重传或重复发布。证据work/v071-release/published-release.json、resume-latest.json。
+- 用户永久授权Codex向github.com/lukino0737/daybook上传本项目源码、APK、校验清单及对应Release/标签，已写入AGENTS.md、docs/BUILD.md与CODEX_HANDOFF.md。上次仅文档提交/推送被审批服务额度硬限制阻断；本次完成文档收尾，不更改发布提交或附件。

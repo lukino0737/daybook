@@ -276,3 +276,5 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 真实DeepSeek及v0.7系列真机效果仍未验证；历史偶发用例边界保持原记录。
 
 - 正式升级：5556安装基线APK哈希与已发布v0.7.0一致，签名匹配后覆盖v0.7.1/code9；extended任务/日程样例全部字段、通知渠道保留，seed/verify/Smoke各一项通过，无卸载或清库。证据work/v071-release/upgrade-run.log、release-verification.json。仅验证API35专用模拟器及样例。
+
+- 发布核验：dc29229的CI35945001582成功，v0.7.1正式Release为latest，APK/源码ZIP/SHA256清单大小与摘要匹配本地；v0.7.0标签与原附件不变。恢复时再次只读确认latest和三附件摘要一致，未重新构建或运行测试。证据work/v071-release/published-release.json、resume-latest.json。

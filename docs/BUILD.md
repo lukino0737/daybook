@@ -24,6 +24,10 @@
 
 覆盖安装必须保持同一 applicationId 和签名。不要卸载旧应用再升级，否则本地数据会被清除。签名材料由维护者本地保存，不提交仓库。
 
+## GitHub 交付授权
+
+项目目标仓库为 [`github.com/lukino0737/daybook`](https://github.com/lukino0737/daybook)。用户已永久授权 Codex 将本项目的源码归档、APK、SHA256 校验清单及对应版本 Release/标签上传到该仓库；后续正常版本交付无需逐次重新确认。上传前仍需使用已验证的发布提交和构建产物，源码归档不得包含真实个人记录、备份、密钥、签名材料、本地配置或构建目录。
+
 ## 个人试用版签名
 
 维护者保存 `.local/signing/daybook-release.jks` 和根目录 `keystore.properties`，两者均被忽略。请将这两份材料另行保存在自己的安全备份中，丢失签名会影响以后直接覆盖升级。
