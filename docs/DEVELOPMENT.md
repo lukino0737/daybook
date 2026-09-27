@@ -401,3 +401,10 @@
 - 发布提交dc2922972dfdd1c6a788baa54493d49e321f97bb的[CI35945001582](https://github.com/lukino0737/daybook/actions/runs/35945001582)成功；[v0.7.1 Release](https://github.com/lukino0737/daybook/releases/tag/v0.7.1)已公开、非预发布且为latest。APK、该提交源码ZIP、SHA256清单三附件大小和摘要匹配本地；原v0.7.0标签、说明和附件保持不变。
 - 用户随后要求继续发布时，低成本只读复核latest及三附件摘要，确认发布实际已完成，未重建、重传或重复发布。证据work/v071-release/published-release.json、resume-latest.json。
 - 用户永久授权Codex向github.com/lukino0737/daybook上传本项目源码、APK、校验清单及对应Release/标签，已写入AGENTS.md、docs/BUILD.md与CODEX_HANDOFF.md。上次仅文档提交/推送被审批服务额度硬限制阻断；本次完成文档收尾，不更改发布提交或附件。
+
+## v0.7.1 新对话交接（2026-09-27）
+
+- 按用户要求仅整理交接。开始时main的HEAD与本地origin/main均为7b51f43，工作区干净；与稳定发布dc29229相比仅六份文档有差异，业务代码未变。
+- 读取现有最终构建、69项JVM、Lint0错误31警告、普通字号9项/大字号4项、正式覆盖升级/启动、CI及发布日志；重新计算三个本地发布附件大小/SHA256，均与已保存远程证据匹配。未进行新的远程发布查询、构建、测试或模拟器启动。
+- CODEX_HANDOFF.md前置完整当前摘要，涵盖11项交接要求、永久交付授权、取消/暂缓方案、验证边界、关键文件与恢复顺序。没有待完成的实施或发布工作，真实DeepSeek与v0.7系列真机效果仍未验证。
+- 本轮仅提交交接和开发记录，保留发布标签/附件；完成交接后停止，下一对话接手简报后等待新需求。
