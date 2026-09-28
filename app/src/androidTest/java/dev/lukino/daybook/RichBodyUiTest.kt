@@ -76,8 +76,15 @@ class RichBodyUiTest {
     @After fun cleanup() { compose.runOnIdle { models.clear() }; db.close(); dir.deleteRecursively() }
     private fun addImage() {
         compose.onNodeWithTag("insert-image").performScrollTo().performClick()
-        compose.waitUntil(5000) { (vm.draft.value?.blocks ?: vm.memoEditor.draft.value?.blocks).orEmpty().any { it.image != null } }
+        try { compose.waitUntil(5000) { (vm.draft.value?.blocks ?: vm.memoEditor.draft.value?.blocks).orEmpty().any { it.image != null } } }
+        catch (e: Throwable) {
+            throw AssertionError("Insertion failed: entry=${vm.draft.value}; memo=${vm.memoEditor.draft.value}; error=${vm.memoEditor.error.value}; imageErrors=${compose.onAllNodesWithTag("image-error").fetchSemanticsNodes().map { it.config.toString() }}", e)
+        }
         compose.waitForIdle()
+    }
+    private fun imageAction(tag: String, action: String) {
+        val actions = compose.onNodeWithTag(tag).performScrollTo().fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
+        compose.runOnIdle { assertTrue(actions.single { it.label == action }.action()) }
     }
     private fun closeEntry() { compose.onNodeWithTag("save").performClick(); compose.waitUntil(5000) { vm.draft.value == null && !vm.busy.value } }
     private fun closeMemo() { compose.onNodeWithTag("memo-done").performClick(); compose.waitUntil(5000) { vm.memoEditor.draft.value == null && !vm.memoEditor.busy.value } }
@@ -97,17 +104,18 @@ class RichBodyUiTest {
             compose.onNodeWithTag("note").performScrollTo().performTextInput("前文后文")
             compose.onNodeWithTag("note").performTextInputSelection(TextRange(2))
             addImage()
-            compose.onNodeWithTag("note").performScrollTo().assertTextContains("前文")
-            compose.onNodeWithTag("note-2").performScrollTo().assertTextContains("后文")
-            compose.onNodeWithTag("body-image-1").performScrollTo().performClick()
+            compose.onNodeWithTag("note").performScrollTo().assertTextContains("前文", substring = true)
+            compose.onNodeWithTag("note").assertTextContains("后文", substring = true)
+            compose.onNodeWithTag("note").performScrollTo().performTouchInput { click(center) }
+            compose.onNodeWithText("查看大图").performClick()
             compose.onNodeWithTag("image-viewer").assertExists(); capture("viewer")
             compose.onNodeWithTag("close-image-viewer").performClick()
-            compose.onNodeWithTag("body-image-1").performScrollTo(); capture("entry-inline")
+            compose.onNodeWithTag("note").performScrollTo(); capture("entry-inline")
             closeEntry()
             val entry = runBlocking { repo.all().first { it.kind == kind } }
             assertEquals("前文后文", entry.note); assertEquals(3, entry.blocks.size)
             compose.runOnIdle { vm.edit(entry) }
-            compose.onNodeWithTag("remove-image-1").performScrollTo().performClick()
+            imageAction("note", "移除图片 1")
             compose.onNodeWithTag("confirm-remove-image").performClick()
             compose.onNodeWithTag("note").performScrollTo().assertTextContains("前文后文")
             closeEntry()
@@ -118,13 +126,13 @@ class RichBodyUiTest {
         compose.onNodeWithTag("nav-memos").performClick(); compose.onNodeWithTag("add").performClick()
         addImage()
         compose.waitUntil(5000) { runBlocking { repo.allMemos().size == 1 } }
-        compose.onNodeWithTag("body-image-1").performScrollTo(); capture("memo-inline")
+        compose.onNodeWithTag("memo-body").performScrollTo(); capture("memo-inline")
         closeMemo()
         val memo = runBlocking { repo.allMemos().single() }
         assertEquals("图片便签 · 1 张", memo.summary)
         compose.onNodeWithText("图片便签 · 1 张").assertExists(); capture("image-only-list")
         compose.onNodeWithTag("memo-${memo.id}").performClick()
-        compose.onNodeWithTag("remove-image-1").performScrollTo().performClick(); compose.onNodeWithTag("confirm-remove-image").performClick()
+        imageAction("memo-body", "移除图片 1"); compose.onNodeWithTag("confirm-remove-image").performClick()
         compose.onNodeWithTag("memo-done").performClick()
         compose.onNodeWithText("保留内容并退出").performClick()
         compose.waitUntil(5000) { vm.memoEditor.draft.value == null }
@@ -148,7 +156,7 @@ class RichBodyUiTest {
         compose.onNodeWithTag("save").performClick()
         compose.waitUntil(5000) { vm.failure.value != null && !vm.busy.value }
         assertEquals(original, vm.draft.value); images.verify(image)
-        compose.onNodeWithTag("body-image-1").performScrollTo(); capture("save-failure")
+        compose.onNodeWithTag("note").performScrollTo(); capture("save-failure")
         compose.runOnIdle {
             val restored = SavedStateHandle(saved.keys().associateWith { saved.get<Any?>(it) })
             models.clear(); vm = DaybookViewModel(repo, restored, backup); models.put("restored", vm); shown = vm

@@ -180,18 +180,18 @@ import androidx.compose.material.icons.outlined.MoreVert
                     items(upcoming.take(3), key = { "upcoming-${it.id}" }) { entry -> EntryCard(entry, now, busy || entry.id in toggling, { openedSwipe = null; vm.edit(entry) }, { vm.toggle(entry) }, showDate = true, onTag = vm::openTag) }
                 }
             }
-            if (view != "memos" && (view != "review" || applied != null)) item {
+            if (view != "memos" && (view != "review" || applied != null) && (view != "day" || visible.isNotEmpty() || dayReminders.isNotEmpty())) item {
                 Text(when (view) { "tasks" -> "任务"; "review" -> "回顾 · ${visible.size} 条"; else -> selected }, style = MaterialTheme.typography.titleLarge)
                 if (view == "day" && selectedNote.description.isNotEmpty()) Text(selectedNote.description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
-            if (view != "memos" && visible.isEmpty() && (view != "day" || dayReminders.isEmpty()) && (view != "tasks" || completedTasks.isEmpty()) && (view != "review" || applied != null)) item {
+            if (view != "memos" && view != "day" && visible.isEmpty() && (view != "tasks" || completedTasks.isEmpty()) && (view != "review" || applied != null)) item {
                 OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.EditCalendar, null, tint = MaterialTheme.colorScheme.primary)
-                    Text(if (view == "day") "这一天，留给你慢慢写。" else if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
+                    Text(if (view == "review") "没有找到匹配的记录。" else "这里暂时没有任务。", style = MaterialTheme.typography.titleMedium)
                     Text(when (view) {
                         "tasks" -> "任务按截止日期分组，完成后可在下方查看或恢复。"
                         "review" -> "试试清除搜索或标签，或切换到全部类型。"
-                        else -> "日程和生活片段，都可以记在这里。"
+                        else -> ""
                     }, style = MaterialTheme.typography.bodyMedium)
                 } }
             }
@@ -272,7 +272,8 @@ import androidx.compose.material.icons.outlined.MoreVert
         }
     }) { aiVisible = false }
     if (appearanceSettings) AppearanceSettingsScreen { appearanceSettings = false }
-    if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow)
+    if (reminderListVisible) ReminderListScreen(reminderRows, reminderListMessage, vm::hideReminderList, vm::newReminder, vm::openReminderRow,
+        busy = busy, generation = vm.reminderGeneration, onDelete = vm::removeListedReminder)
     if (confirmAll) AlertDialog(onDismissRequest = vm::dismissReviewConfirmation,
         modifier = Modifier.testTag("review-confirm-all"), title = { Text("确定要回顾所有内容吗？") },
         confirmButton = { TextButton(onClick = { vm.applyReview(true) }) { Text("确定") } },

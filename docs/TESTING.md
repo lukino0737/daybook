@@ -278,3 +278,17 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 正式升级：5556安装基线APK哈希与已发布v0.7.0一致，签名匹配后覆盖v0.7.1/code9；extended任务/日程样例全部字段、通知渠道保留，seed/verify/Smoke各一项通过，无卸载或清库。证据work/v071-release/upgrade-run.log、release-verification.json。仅验证API35专用模拟器及样例。
 
 - 发布核验：dc29229的CI35945001582成功，v0.7.1正式Release为latest，APK/源码ZIP/SHA256清单大小与摘要匹配本地；v0.7.0标签与原附件不变。恢复时再次只读确认latest和三附件摘要一致，未重新构建或运行测试。证据work/v071-release/published-release.json、resume-latest.json。
+
+## 四项体验调整专项（2026-09-27 至 2026-09-28，main 尚未发布）
+
+- 构建Debug/AndroidTest、69项JVM（失败/错误/跳过均0）通过；最终Lint0错误35警告，包含原有提示与本次KTX/测试建议，未扩大依赖维护范围。证据work/ux-improvements/verified-build.log、final-build2.log、real-picker-build.log及本地JVM报告。
+- 原生编辑器7项：旧纯文/图文无损往返、光标插图后续写、跨图选区替换、图片边界退格、中文组合输入及emoji、字数限制与选区、超长替换拒绝后保留图文；editor-boundaries-final.log全部通过。
+- 图文UI六项在final-normal.log的RichBodyUiTest段通过：三类事项插入/查看/移除、纯图片便签自动保存与空内容退出、取消草稿与取消选图、写入失败/草稿恢复、删除撤销与删除失败、损坏图片与9图限制。该日志之后的批次曾中断，没有完整组合汇总；只复用这六项完成结果。
+- reminder删除仓库3项见targeted2.log：附带提醒保留原业务字段且不再待调度、独立提醒删除、编辑/整体恢复后的旧确认被拒绝。该日志共12项通过，后续编辑器补充边界和预览小修正按新日志复验。
+- resume-normal.log 14项通过：NotificationDetailUiTest四项、InlineBodyEditorTest当时六项、UxImprovementsUiTest三项、ImagePickerSystemTest一项。覆盖预览只读/编辑返回/内容失效/草稿保护、当天空态与有内容显示、提醒左滑确认/取消与保留原内容、长卡片固定操作栏、真实系统选图/删除原图副本可读/Activity重建。随后编辑器字数拒绝边界已用上述7项复验。
+- 150%字号final-large.log九项通过：RichBodyUiTest两项、NotificationDetailUiTest四项、UxImprovementsUiTest三项；font-restored.log确认1.0。普通和大字号截图已目视核对连续图文边框、卡片居中/模糊/操作栏、长内容滚动、空日历及提醒确认按钮。
+- 图片备份四项与通知路由两项在regression.log各自完成通过；该组合包含已修复的早期图文失败，因此不称整批通过。早期旧测试整框替换文字已按单框选区编辑更新；导入后的跨线程View更新和拒绝超长替换误删图片均有失败证据及后续通过记录。
+- 验证边界：没有完整全仓库QA、真实API调用、真机、API26运行或新正式APK覆盖升级验收；专用模拟器原数据保留。旧版本发布及已有验证不受本次测试包影响。
+
+- 最终真实系统补验real-picker-final.log三项通过：DocumentsUI保持前台期间，在主线程重建处于STOPPED状态的宿主Activity；返回图片仍插入原选区位置，前后文字、自动保存、删除原图后副本及再次Activity重建均保留；另含最新代码NotificationRoutingTest两项。Compose-only模拟注册表未投递结果及ActivityScenario强制RESUMED的尝试不作为产品通过依据，已用此真实生命周期路径替代。
+- 本批普通字号共有30个不同专项用例分批通过（图文UI6、原生编辑器7、提醒仓库3、预览4、新交互UI3、真实选图1、图片备份4、通知路由2）；150%字号另9项。不是一次性全套运行，也不包含真机验收。

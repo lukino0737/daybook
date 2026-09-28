@@ -99,7 +99,8 @@ class NotificationDetailUiTest {
         compose.onNodeWithTag("detail-back").performClick()
         assertEquals(before, runBlocking { repo.allMemos().single() })
         open("memo", memo.id); compose.onNodeWithTag("detail-edit").performClick()
-        compose.onNodeWithTag("memo-body").performTextReplacement("编辑后的便签")
+        compose.onNodeWithTag("memo-body").performTextInputSelection(androidx.compose.ui.text.TextRange(0, "上半段正文".length))
+        compose.onNodeWithTag("memo-body").performTextInput("编辑后的便签")
         compose.onNodeWithTag("memo-done").performClick()
         compose.waitUntil(5000) { vm.memoEditor.draft.value == null && vm.notificationDetail.value?.memo?.body?.contains("编辑后的便签") == true }
         compose.onNodeWithTag("notification-detail").assertExists()

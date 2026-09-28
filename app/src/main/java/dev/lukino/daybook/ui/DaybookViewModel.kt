@@ -88,6 +88,11 @@ class DaybookViewModel(private val repository: EntryRepository, private val save
             else -> openEntry(row.id)
         }
     }
+    val reminderGeneration get() = repository.restoreGeneration
+    fun removeListedReminder(row: dev.lukino.daybook.reminder.ReminderListItem, generation: Long) = runWrite {
+        repository.removeListedReminder(row, generation)
+        saved["reminder-list-message"] = if (row.key.startsWith("reminder:")) "已删除独立提醒" else "已取消提醒，原内容已保留"
+    }
     fun notification(host: String, id: String) {
         if (host !in setOf("entry", "memo", "reminder")) return
         // Preserve an open draft; follow the notification after the user saves or cancels it.

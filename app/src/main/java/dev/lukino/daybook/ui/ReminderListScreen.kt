@@ -3,6 +3,8 @@ package dev.lukino.daybook.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
@@ -21,10 +23,17 @@ import dev.lukino.daybook.reminder.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ReminderListScreen(rows: List<ReminderListItem>, message: String?, onBack: () -> Unit,
-    onNew: () -> Unit, onOpen: (ReminderListItem) -> Unit) {
+    onNew: () -> Unit, onOpen: (ReminderListItem) -> Unit,
+    busy: Boolean = false, generation: Long = 0,
+    onDelete: (ReminderListItem, Long) -> Unit = { _, _ -> }) {
     var pausedExpanded by rememberSaveable { mutableStateOf(false) }
     var finishedExpanded by rememberSaveable { mutableStateOf(false) }
     var settings by rememberSaveable { mutableStateOf(false) }
+    var openedSwipe by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf<Pair<ReminderListItem, Long>?>(null) }
+    val listState = rememberLazyListState()
+    val dragging by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(dragging, generation) { openedSwipe = null }
     Dialog(onDismissRequest = onBack, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val dialogView = LocalView.current
         SideEffect { (dialogView.parent as? DialogWindowProvider)?.window?.let {
@@ -37,7 +46,7 @@ import dev.lukino.daybook.reminder.*
         }, floatingActionButton = {
             FloatingActionButton(onClick = onNew, modifier = Modifier.testTag("reminder-list-add")) { Icon(Icons.Outlined.Add, "新建提醒") }
         }) { padding ->
-            LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("reminder-list"), contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("reminder-list"), state = listState, contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 message?.let { item { Text(it, modifier = Modifier.testTag("reminder-list-message")) } }
                 ReminderGroup.entries.forEach { group ->
                     val section = rows.filter { it.group == group }
@@ -51,12 +60,14 @@ import dev.lukino.daybook.reminder.*
                     if (expanded) {
                         if (section.isEmpty()) item { Text(if (group == ReminderGroup.PENDING) "暂无待提醒内容，可点右下角新建提醒。" else "暂无${group.label}的提醒") }
                         items(section, key = { it.key }) { row ->
-                            Card(onClick = { onOpen(row) }, modifier = Modifier.fillMaxWidth().testTag("reminder-row-${row.key}")) {
+                            SwipeDeleteRow(row.key, openedSwipe, !busy, { openedSwipe = it }, { deleting = row to generation }) {
+                            Card(enabled = !busy, onClick = { openedSwipe = null; onOpen(row) }, modifier = Modifier.fillMaxWidth().testTag("reminder-row-${row.key}")) {
                                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(row.title, style = MaterialTheme.typography.titleMedium)
                                     Text("${row.source} · ${row.rule}", style = MaterialTheme.typography.bodySmall)
                                     Text(row.status, style = MaterialTheme.typography.bodyMedium)
                                 }
+                            }
                             }
                         }
                     }
@@ -65,5 +76,15 @@ import dev.lukino.daybook.reminder.*
         }
         BackgroundReminderGuide { settings = true }
         if (settings) ReminderSettingsScreen { settings = false }
+        deleting?.let { (row, expectedGeneration) ->
+            val independent = row.key.startsWith("reminder:")
+            AlertDialog(onDismissRequest = { deleting = null }, modifier = Modifier.testTag("reminder-delete-dialog"),
+                title = { Text(if (independent) "删除这条独立提醒？" else "取消这条提醒？") },
+                text = { Text(row.title + if (independent) "\n确认后删除整条独立提醒，并停止后续通知。" else "\n仅取消提醒，原${row.source}的正文、图片及其他内容会保留。") },
+                confirmButton = { TextButton(enabled = !busy, modifier = Modifier.testTag("reminder-delete-confirm"), onClick = {
+                    deleting = null; openedSwipe = null; onDelete(row, expectedGeneration)
+                }) { Text(if (independent) "删除" else "取消提醒") } },
+                dismissButton = { TextButton(onClick = { deleting = null }) { Text("返回") } })
+        }
     }
 }

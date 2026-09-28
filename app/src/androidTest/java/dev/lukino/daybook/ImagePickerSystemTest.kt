@@ -20,7 +20,8 @@ class ImagePickerSystemTest {
     @get:Rule(order = 0) val returning = ReturningUserRule()
     @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     @Test fun realPickerCopiesImageAndActivityRecreationKeepsDraft() {
-        val app = compose.activity.application as DaybookApplication
+        val host = compose.activity
+        val app = host.application as DaybookApplication
         val resolver = app.contentResolver
         val marker = "Daybook图片QA-${UUID.randomUUID()}"
         val name = "$marker.png"
@@ -35,6 +36,8 @@ class ImagePickerSystemTest {
             }
             compose.onNodeWithTag("nav-memos").performClick(); compose.onNodeWithTag("add").performClick()
             compose.onNodeWithTag("memo-body").performTextInput(marker)
+            val insertionOffset = marker.length / 2
+            compose.onNodeWithTag("memo-body").performTextInputSelection(androidx.compose.ui.text.TextRange(insertionOffset))
             compose.onNodeWithTag("insert-image").performScrollTo().performClick()
             val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
             fun find(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
@@ -47,6 +50,12 @@ class ImagePickerSystemTest {
             val until = System.currentTimeMillis() + 10_000
             while (found == null && System.currentTimeMillis() < until) { found = find(automation.rootInActiveWindow?.takeIf { it.packageName?.toString() == "com.android.documentsui" }); if (found == null) android.os.SystemClock.sleep(200) }
             assertNotNull("System document picker must show the synthetic image", found)
+            // Recreate the actual host while DocumentsUI owns the foreground and a result is pending.
+            // ActivityScenario.recreate forces RESUMED; the picker intentionally keeps the host STOPPED.
+            InstrumentationRegistry.getInstrumentation().runOnMainSync { host.recreate() }
+            val recreationDeadline = System.currentTimeMillis() + 10_000
+            while (!host.isDestroyed && System.currentTimeMillis() < recreationDeadline) android.os.SystemClock.sleep(100)
+            assertTrue("Host must be recreated while the picker stays open", host.isDestroyed)
             automation.waitForIdle(500, 5000)
             android.os.SystemClock.sleep(500)
             found = find(automation.rootInActiveWindow)
@@ -60,10 +69,14 @@ class ImagePickerSystemTest {
             compose.waitUntil(10_000) { runBlocking { app.repository.allMemos().any { it.body == marker && RichBody.images(it.blocks).size == 1 } } }
             val memo = runBlocking { app.repository.allMemos().single { it.body == marker } }
             val image = RichBody.images(memo.blocks).single()
+            assertEquals(marker.take(insertionOffset), memo.blocks.first().text)
+            assertEquals(marker.drop(insertionOffset), memo.blocks.last().text)
             assertEquals(1, resolver.delete(uri, null, null)); sourceRemoved = true; app.images.verify(image)
             compose.activityRule.scenario.recreate()
-            compose.onNodeWithTag("memo-body").performScrollTo().assertTextContains(marker)
-            compose.onNodeWithTag("body-image-1").performScrollTo().assertExists()
+            compose.onNodeWithTag("memo-body").performScrollTo().assertTextContains(marker.take(insertionOffset), substring = true)
+            compose.onNodeWithTag("memo-body").assertTextContains(marker.drop(insertionOffset), substring = true)
+            val actions = compose.onNodeWithTag("memo-body").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
+            assertTrue(actions.any { it.label == "查看图片 1" })
             if (InstrumentationRegistry.getArguments().getString("imagePreview") == "true") {
                 compose.waitForIdle(); android.os.SystemClock.sleep(450)
                 val out = java.io.File(app.getExternalFilesDir(null), "image-previews").apply { mkdirs() }

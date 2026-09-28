@@ -14,18 +14,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -38,91 +35,124 @@ import java.util.UUID
     text: String, blocks: List<BodyBlock>, enabled: Boolean, tag: String, label: String,
     controller: ImageEditorController?, autoFocus: Boolean = false, onChange: (String, List<BodyBlock>) -> Unit,
 ) {
-    val current = RichBody.effective(text, blocks)
-    val latest by rememberUpdatedState(current)
     val change by rememberUpdatedState(onChange)
-    var focusIndex by rememberSaveable { mutableIntStateOf(0) }
-    var cursor by rememberSaveable { mutableIntStateOf(0) }
-    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
-    var selectedCursor by rememberSaveable { mutableIntStateOf(0) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val editor = remember(context) { InlineBodyEditText(context) }
+    var selectionStart by rememberSaveable { mutableIntStateOf(0) }
+    var selectionEnd by rememberSaveable { mutableIntStateOf(0) }
+    var selectedStart by rememberSaveable { mutableIntStateOf(0) }
+    var selectedEnd by rememberSaveable { mutableIntStateOf(0) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    var removeIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedImage by remember { mutableStateOf<Int?>(null) }
+    var removeImage by remember { mutableStateOf<Int?>(null) }
     var viewing by rememberSaveable { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
-    val keyboard = LocalSoftwareKeyboardController.current
     val importing by controller?.busy?.collectAsState() ?: remember { mutableStateOf(false) }
     val active = enabled && !importing
+    val images = RichBody.images(blocks)
+    val thumbnails by produceState<Map<String, android.graphics.Bitmap>>(emptyMap(), images, controller?.store) {
+        value = withContext(Dispatchers.IO) {
+            images.distinctBy { it.hash }.mapNotNull { image ->
+                runCatching {
+                    val file = controller?.store?.file(image) ?: return@runCatching null
+                    val options = BitmapFactory.Options().apply {
+                        var sample = 1
+                        while (maxOf(image.width, image.height) / sample > 1024) sample *= 2
+                        inSampleSize = sample
+                    }
+                    BitmapFactory.decodeFile(file.path, options)?.let { image.hash to it }
+                }.getOrNull()
+            }.toMap()
+        }
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && controller != null) scope.launch {
             val owner = "import-${UUID.randomUUID()}"
             error = null
             try {
                 val image = controller.import(uri, owner)
-                val value = latest
-                val index = selectedIndex.coerceIn(0, value.lastIndex)
-                val inserted = RichBody.insert(RichBody.text(value), value, index, selectedCursor.coerceIn(0, value[index].text.length), image)
-                change(RichBody.text(inserted), inserted)
-                focusIndex = index + 2; cursor = 0
+                withContext(Dispatchers.Main.immediate) { editor.insertImage(image, selectedStart, selectedEnd) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { error = if (e is IllegalArgumentException) e.message else "图片添加失败，请检查可用空间后重试" }
             finally { controller.finished(owner) }
         }
     }
+    val color = MaterialTheme.colorScheme.onSurface.toArgb()
+    val hintColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
+    val fontSize = MaterialTheme.typography.bodyLarge.fontSize.value
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.labelLarge)
-        current.forEachIndexed { index, block ->
-            if (block.image == null) {
-                val requester = remember { FocusRequester() }
-                LaunchedEffect(Unit) { if (autoFocus && index == 0) { requester.requestFocus(); keyboard?.show() } }
-                var value by rememberSaveable(index, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(block.text)) }
-                if (value.text != block.text) value = value.copy(text = block.text,
-                    selection = TextRange(value.selection.start.coerceAtMost(block.text.length), value.selection.end.coerceAtMost(block.text.length)))
-                OutlinedTextField(value = value, enabled = active, onValueChange = { updated ->
-                    if (text.length - block.text.length + updated.text.length <= 20_000) {
-                        value = updated; focusIndex = index; cursor = updated.selection.end
-                        val changed = current.toMutableList().apply { set(index, BodyBlock(updated.text)) }
-                        onChange(RichBody.text(changed), if (changed.size == 1) emptyList() else changed)
-                    }
-                }, placeholder = { Text(if (index == 0) "写下正文…" else "继续输入文字…") },
-                    minLines = if (current.size == 1) 4 else 2,
-                    modifier = Modifier.fillMaxWidth().focusRequester(requester).testTag(if (index == 0) tag else "$tag-$index")
-                        .onFocusChanged { if (it.isFocused) { focusIndex = index; cursor = value.selection.end } })
-            } else {
-                val ordinal = index / 2 + 1
-                Card(Modifier.fillMaxWidth()) {
-                    BodyImageView(block.image, controller?.store, Modifier.fillMaxWidth().height(220.dp)
-                        .testTag("body-image-$index").clickable(enabled = !importing) { viewing = ordinal - 1 }, 720)
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("图片 $ordinal · 点击查看", style = MaterialTheme.typography.bodySmall)
-                        TextButton(enabled = active, onClick = { removeIndex = index }, modifier = Modifier.testTag("remove-image-$index")) { Text("移除") }
+        Surface(shape = MaterialTheme.shapes.small, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth()) {
+            androidx.compose.ui.viewinterop.AndroidView(factory = { context ->
+                editor.apply {
+                    this.tag = tag
+                    hint = "写下正文…"
+                    setBody(text, blocks)
+                    setSelection(selectionStart.coerceIn(0, length()), selectionEnd.coerceIn(0, length()))
+                    onBodyChange = { value, body -> change(value, body) }
+                    onImageClick = { selectedImage = it }
+                    onSelection = { start, end -> selectionStart = start; selectionEnd = end }
+                    if (autoFocus) post {
+                        requestFocus()
+                        (context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                            .showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
                     }
                 }
-            }
+            }, update = {
+                it.isEnabled = active
+                it.setTextColor(color); it.setHintTextColor(hintColor); it.textSize = fontSize
+                it.setBody(text, blocks); it.setThumbnails(thumbnails)
+            }, modifier = Modifier.fillMaxWidth().testTag(tag).semantics {
+                editableText = androidx.compose.ui.text.AnnotatedString(editor.text.toString())
+                textSelectionRange = TextRange(selectionStart, selectionEnd)
+                customActions = images.indices.flatMap { ordinal ->
+                    listOf(CustomAccessibilityAction("查看图片 ${ordinal + 1}") { viewing = ordinal; true }) +
+                        if (active) listOf(CustomAccessibilityAction("移除图片 ${ordinal + 1}") { removeImage = ordinal; true }) else emptyList()
+                }
+                setText { value ->
+                    if (!active) false else { editor.setText(value.text); true }
+                }
+                insertTextAtCursor { value ->
+                    if (!active) false else {
+                        editor.let { view ->
+                            val start = minOf(view.selectionStart, view.selectionEnd).coerceAtLeast(0)
+                            val end = maxOf(view.selectionStart, view.selectionEnd).coerceAtLeast(start)
+                            view.text.replace(start, end, value.text)
+                            view.setSelection((start + value.length).coerceAtMost(view.length()))
+                        }; true
+                    }
+                }
+                setSelection { start, end, _ ->
+                    editor.let { it.setSelection(start.coerceIn(0, it.length()), end.coerceIn(0, it.length())) }; true
+                }
+                requestFocus { editor.requestFocus() }
+            })
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(enabled = active && controller?.store != null && RichBody.images(blocks).size < 9, onClick = {
-                selectedIndex = focusIndex.coerceIn(0, current.lastIndex)
-                if (current[selectedIndex].image != null) selectedIndex = current.lastIndex
-                selectedCursor = cursor.coerceIn(0, current[selectedIndex].text.length)
+            OutlinedButton(enabled = active && controller?.store != null && images.size < 9, onClick = {
+                selectedStart = editor.selectionStart.coerceAtLeast(0)
+                selectedEnd = editor.selectionEnd.coerceAtLeast(0)
                 picker.launch(arrayOf("image/jpeg", "image/png", "image/webp"))
             }, modifier = Modifier.testTag("insert-image")) { Text(if (importing) "处理图片…" else "插入图片") }
-            Text("${RichBody.images(blocks).size}/9", style = MaterialTheme.typography.bodySmall)
+            Text("${images.size}/9", style = MaterialTheme.typography.bodySmall)
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("image-error")) }
     }
-    removeIndex?.let { index ->
-        AlertDialog(onDismissRequest = { removeIndex = null }, title = { Text("移除这张图片？") },
+    selectedImage?.let { ordinal ->
+        if (ordinal in images.indices) AlertDialog(onDismissRequest = { selectedImage = null }, title = { Text("图片 ${ordinal + 1}") },
+            confirmButton = { TextButton(onClick = { viewing = ordinal; selectedImage = null }) { Text("查看大图") } },
+            dismissButton = { TextButton(enabled = active, onClick = { removeImage = ordinal; selectedImage = null }) { Text("移除图片") } })
+    }
+    removeImage?.let { ordinal ->
+        AlertDialog(onDismissRequest = { removeImage = null }, title = { Text("移除这张图片？") },
             text = { Text("前后文字会保留，相册原图不受影响。") },
             confirmButton = { TextButton(enabled = active, modifier = Modifier.testTag("confirm-remove-image"), onClick = {
-                val removed = RichBody.remove(current, index)
-                onChange(RichBody.text(removed), if (removed.size == 1) emptyList() else removed)
-                focusIndex = (index - 1).coerceAtLeast(0); cursor = removed[focusIndex].text.length; removeIndex = null
-            }) { Text("移除") } },
-            dismissButton = { TextButton(onClick = { removeIndex = null }) { Text("取消") } })
+                editor.removeImage(ordinal); removeImage = null
+            }) { Text("移除") } }, dismissButton = { TextButton(onClick = { removeImage = null }) { Text("取消") } })
     }
-    viewing?.let { index ->
-        val images = RichBody.images(blocks)
-        if (images.isNotEmpty()) ImageViewer(images, index.coerceIn(images.indices), controller?.store) { viewing = null }
+    viewing?.let { ordinal ->
+        if (images.isNotEmpty()) ImageViewer(images, ordinal.coerceIn(images.indices), controller?.store) { viewing = null }
     }
 }
 

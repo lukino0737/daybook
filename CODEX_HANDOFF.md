@@ -1,8 +1,46 @@
 # Daybook 项目交接
 
-更新：2026-09-27。**v0.7.1/code9 已正式发布，Room6/ZIP JSON6。当前没有待完成的实施、测试或发布工作。本轮仅整理交接；新对话低成本接手后等待用户需求，不重新构建、完整QA或重复发布。真实DeepSeek与v0.7系列真机效果仍未验证。**
+更新：2026-09-28。**四项体验调整已实现并完成专项验收，正在提交推送main及核对CI。已发布版本仍为v0.7.1/code9；新代码尚未发布APK，旧标签和附件不变。**
 
-## 2026-09-27 交接摘要（恢复时优先）
+## 最新实施状态（2026-09-28，恢复时优先）
+
+### 当前目标与授权
+
+用户已明确要求实施四项并「确认采用」推荐方案，范围见docs/UX-IMPROVEMENTS.md。实现与本地专项验收已完成，收尾为提交推送main并核对CI；不自动启动额外功能。永久上传授权继续有效，但本轮没有启动新版本发布。
+
+### 已完成
+
+- 提醒列表左滑露出删除按钮后确认；独立提醒删除整条，任务/日程/便签只取消附带提醒、原内容保留。数据库写锁内验证修改版本与恢复代次。
+- 单一连续图文编辑区域：原生EditText与Compose整合，光标、选区跨图文；图独占一行并可继续文字。原BodyBlock、Room6、ZIP JSON6与历史schema不变，无新依赖。
+- 模糊背景居中预览卡片，左上退出、右上编辑；短内容自然收缩、长内容卡片内滚动，编辑返回与草稿保护保留。背景仅内存快照。
+- 日历当天没有可显示内容时隐藏日期标题、节假日说明和空提示卡片；月历、近期截止及新增按钮保留。
+- 导入后跨线程操作控件、超长替换拒绝时误删选区图片已复现并修复；选图位置可恢复，正文由SavedStateHandle恢复，不依赖会丢失自定义图片Span的原生TextView保存。
+
+### 已验证结果
+
+69项JVM通过（失败/错误/跳过均0），Debug/AndroidTest构建通过，Lint0错误35警告。API35普通字号30个不同专项分批通过；150%字号9项通过并恢复字号1.0。已查看普通/大字号连续图文、卡片预览、空态和删除确认截图。真实DocumentsUI选图期间重建STOPPED宿主，返回仍在原光标插图；删除原图副本可读、再次Activity重建与通知路由通过。详细分批口径、失败日志及修复见docs/TESTING.md；不宣称一次性完整QA。
+
+### 尚未完成、边界与环境
+
+- 剩余：提交推送main、核对CI并记录结果。专用模拟器已确认字号1.0并正常关闭，证据final-font.log、emulator-stop.log。完成后的Git状态以实际git log为准。
+- 本轮没有生成/发布新正式APK；app版本号仍为0.7.1/code9。现有v0.7.1正式附件不包含这四项新变化；旧发布提交dc29229不变。
+- 真实DeepSeek、真机和API26实际运行未验证；Lint及历史偶发测试问题未扩大维护范围。
+- 仅专用API35模拟器5554同签名覆盖QA包，原数据保留、无卸载清库；5556未操作。用户原始标注截图未保存或提交。
+
+### 关键文件与证据
+
+- 主代码：ui/InlineBodyEditText.kt、RichBodyEditor.kt、PreviewBackdrop.kt、NotificationDetail.kt、ReminderListScreen.kt、DaybookScreen.kt、DaybookViewModel.kt，data/EntryRepository.kt（路径前缀app/src/main/java/dev/lukino/daybook/）。
+- 新专项：InlineBodyEditorTest、ReminderRemovalTest、UxImprovementsUiTest；更新RichBodyUiTest、ImagePickerSystemTest、NotificationDetailUiTest。文档：docs/UX-IMPROVEMENTS.md、USAGE.md、TESTING.md、DEVELOPMENT.md、BACKLOG.md。
+- 本地work/ux-improvements/：verified-build.log、final-build2.log、real-picker-final-build.log；editor-boundaries-final.log七项、targeted2.log提醒三项所在批次、final-normal.log图文UI六项段、resume-normal.log十四项、regression.log备份四项段、real-picker-final.log三项、final-large.log九项；image-previews/、detail-previews/、previews/ux-previews/已查看。
+- 曾失败的Compose-only选图结果模拟与ActivityScenario强制RESUMED尝试已由真实系统STOPPED宿主重建测试替代，不作为未修复产品故障。临时诊断日志已从产品代码移除。
+
+### Git与恢复建议
+
+实施基线main=4259b71，本轮代码/通用文档待提交；不提交work、构建产物、个人截图或本机配置。恢复时先看最新提交及CI记录，复用上述已验证结果，勿重复实施四项或重新发布v0.7.1。后续新宏观方案仍须先获用户确认。
+
+---
+
+以下是v0.7.1发布后的历史摘要，关于「没有待完成工作」等描述仅代表四项调整获批之前。
 
 ### 1. 当前目标
 

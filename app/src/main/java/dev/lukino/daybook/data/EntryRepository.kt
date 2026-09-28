@@ -64,6 +64,30 @@ class EntryRepository(private val database: DaybookDatabase, val images: dev.luk
     }
     suspend fun deleteReminder(id: String) = writes.withLock { reminderDao.delete(id) }
 
+    /** A reminder-list action never deletes its attached entry/memo or overwrites a newer edit. */
+    suspend fun removeListedReminder(expected: dev.lukino.daybook.reminder.ReminderListItem, generation: Long) = writes.withLock {
+        require(generation == restoreGeneration) { "数据已从备份恢复，请重新选择提醒" }
+        val current = dev.lukino.daybook.reminder.ReminderListRules.items(dao.all(), memoDao.all(), reminderDao.all(),
+            java.time.Instant.now(), java.time.ZoneId.systemDefault()).firstOrNull { it.key == expected.key }
+        require(current != null && current.updatedAt == expected.updatedAt && current.title == expected.title && current.rule == expected.rule) {
+            "这条提醒已变化或已删除，请重新选择"
+        }
+        when {
+            expected.key == "reminder:${expected.id}" -> reminderDao.delete(expected.id)
+            expected.key == "memo:${expected.id}" -> {
+                val value = requireNotNull(memoDao.get(expected.id))
+                memoDao.save(value.copy(reminderAt = null, reminderDeliveredFor = null,
+                    updatedAt = maxOf(System.currentTimeMillis(), value.updatedAt + 1)))
+            }
+            expected.key == expected.id -> {
+                val value = requireNotNull(dao.get(expected.id))
+                dao.save(value.copy(reminderAt = null, reminderDeliveredFor = null,
+                    updatedAt = maxOf(System.currentTimeMillis(), value.updatedAt + 1)))
+            }
+            else -> error("提醒来源无效")
+        }
+    }
+
     // Scheduling and delivery share the write lock: stale notifications cannot race with edits/restores.
     suspend fun reconcileReminders(deliver: (ReminderTarget) -> Boolean, schedule: (List<ReminderTarget>) -> Unit, now: java.time.Instant = java.time.Instant.now(), zone: java.time.ZoneId = java.time.ZoneId.systemDefault()) = writes.withLock {
         dao.all().forEach { entry ->
