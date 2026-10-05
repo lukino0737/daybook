@@ -1,13 +1,16 @@
 # Daybook 项目交接
 
-## v0.7.2 发布接续（2026-10-05，优先）
+## v0.7.2 发布完成（2026-10-05，优先）
 
-- 用户明确要求发布APK，版本v0.7.2；沿用现有签名，code10，Room6/ZIP JSON6不变，保留所有旧标签和附件。
-- 基线main=e8b08cb，四项实现e17cc3e及其CI成功直接复用。当前已更新版本号、发布说明和使用文档。
-- 正式Release/AndroidTest构建成功；已验证安装基线与公开v0.7.1附件哈希一致，新旧同签名，真实覆盖升级seed/verify及正式启动各一项通过，样例字段与通知渠道保留。字号1.0，5556正常关闭，数据保留。
-- 待完成：提交推送/CI、新Release及三个附件校验、最终记录。APK大小13014895字节，SHA256为9fc4db4148cd2cf70edaad67a6c497f08f4a0a9e48b1027852c780710af05ed9；不重复构建或升级。未验证阶段不可写成通过。
-- 证据与本机发布脚本放work/v072-release/，交付放outputs/；只提交通用文档与版本代码。恢复先核对Git和上述目录，不重复已成功阶段。
-- 真实DeepSeek、真机及API26运行仍未验证；不扩展功能或补跑完整QA。
+- 用户明确要求发布APK，版本v0.7.2。现已正式发布0.7.2/code10，原签名，Room6/ZIP JSON6不变，包含四项体验调整。
+- 发布提交与标签v0.7.2指向1ec2561f5d70c9dcc8cebf17d819e94f3d82ef07，已推送main；[CI37282754979](https://github.com/lukino0737/daybook/actions/runs/37282754979)成功。
+- [正式Release](https://github.com/lukino0737/daybook/releases/tag/v0.7.2)已公开、非预发布，并设为latest。APK、源码ZIP、SHA256清单远程大小与摘要均和本地一致；v0.7.1原标签、Release正文与三个附件ID/大小/摘要核验不变，其他旧版未操作。
+- 正式Release/AndroidTest构建成功；安装基线与公开v0.7.1附件哈希一致，新旧同签名，真实覆盖升级seed/verify及正式启动各一项通过，任务/日程样例字段与通知渠道保留。无卸载清库。字号1.0，专用5556正常关闭、数据保留；5554未启动。
+- 直接复用实现阶段69项JVM、普通字号30个不同专项分批及150%字号9项结果；本次未重复完整QA。真实DeepSeek、真机及API26运行仍未验证，不因此自动开新阶段。
+- 本次实施、验收、发布均完成，无待续发布步骤。最后只同步完成记录；最新文档提交与Git同步状态以git log/status为准。后续等待试用反馈或新需求；新宏观方案先确认，不重做构建、升级或上传。
+- 证据：work/v072-release/build.log、release-verification.json、upgrade-run.log及seed/verify/smoke日志、ci-final.json、published-release.json、publish.log、final-font.log、emulator-stop.log。关键文档docs/releases/v0.7.2.md、docs/TESTING.md、docs/DEVELOPMENT.md。
+- 交付：outputs/daybook-v0.7.2.apk、daybook-v0.7.2-source.zip、SHA256SUMS-v0.7.2.txt。APK大小13014895字节，SHA256为9fc4db4148cd2cf70edaad67a6c497f08f4a0a9e48b1027852c780710af05ed9。源码ZIP来自发布提交，只含被跟踪的源码/通用文档，不含work、签名或本机配置。
+- 恢复时先核对本节、Git和已有证据，复用完成结果。发布源码ZIP中的交接是发布前快照，以main最新记录为准。
 
 以下四项实施状态为发布前历史记录，新发布进度以上节为准。
 

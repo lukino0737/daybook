@@ -301,3 +301,4 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 真实v0.7.1→v0.7.2直接覆盖：UpgradeContinuityTest seed/verify各一项、SmokeTest一项通过。任务/日程样例字段及通知渠道保留，未卸载清库。见upgrade-run.log和三个分段日志。模拟器已确认字号1.0并正常关闭。
 - APK大小13014895字节，SHA256：9fc4db4148cd2cf70edaad67a6c497f08f4a0a9e48b1027852c780710af05ed9。
 - 真实DeepSeek、真机和API26实际运行未验证，不把API35结果扩展为所有机型通过。
+- 发布提交1ec2561的[CI37282754979](https://github.com/lukino0737/daybook/actions/runs/37282754979)成功。v0.7.2正式Release、标签提交、latest及三个远程附件大小/SHA256均已核对；v0.7.1标签、正文和附件ID/大小/摘要不变，见published-release.json。
