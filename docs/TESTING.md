@@ -293,3 +293,11 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 - 最终真实系统补验real-picker-final.log三项通过：DocumentsUI保持前台期间，在主线程重建处于STOPPED状态的宿主Activity；返回图片仍插入原选区位置，前后文字、自动保存、删除原图后副本及再次Activity重建均保留；另含最新代码NotificationRoutingTest两项。Compose-only模拟注册表未投递结果及ActivityScenario强制RESUMED的尝试不作为产品通过依据，已用此真实生命周期路径替代。
 - 本批普通字号共有30个不同专项用例分批通过（图文UI6、原生编辑器7、提醒仓库3、预览4、新交互UI3、真实选图1、图片备份4、通知路由2）；150%字号另9项。不是一次性全套运行，也不包含真机验收。
 - 实现提交e17cc3e的[CI36432113440](https://github.com/lukino0737/daybook/actions/runs/36432113440)成功，证据ci-final.json。final-font.log为1.0，emulator-stop.log记录正常关闭。CI action/运行时弃用提示保留，不等于构建失败。
+
+## v0.7.2 发布验收（2026-10-05）
+
+- 版本0.7.2/code10；正式Release/AndroidTest构建成功（work/v072-release/build.log），复用上述四项行为的专项结果。
+- 已发布v0.7.1本地APK与远程附件的大小/SHA256一致，专用API35模拟器安装基线与该APK一致；v0.7.2与v0.7.1签名一致，元数据正确，见release-verification.json。
+- 真实v0.7.1→v0.7.2直接覆盖：UpgradeContinuityTest seed/verify各一项、SmokeTest一项通过。任务/日程样例字段及通知渠道保留，未卸载清库。见upgrade-run.log和三个分段日志。模拟器已确认字号1.0并正常关闭。
+- APK大小13014895字节，SHA256：9fc4db4148cd2cf70edaad67a6c497f08f4a0a9e48b1027852c780710af05ed9。
+- 真实DeepSeek、真机和API26实际运行未验证，不把API35结果扩展为所有机型通过。
