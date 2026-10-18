@@ -279,7 +279,7 @@ APK SHA-256：`71b2a30c864bf036b042afc203da4c90d5520bc14b2baf718487a9a8eec25f7b`
 
 - 发布核验：dc29229的CI35945001582成功，v0.7.1正式Release为latest，APK/源码ZIP/SHA256清单大小与摘要匹配本地；v0.7.0标签与原附件不变。恢复时再次只读确认latest和三附件摘要一致，未重新构建或运行测试。证据work/v071-release/published-release.json、resume-latest.json。
 
-## 四项体验调整专项（2026-09-27 至 2026-09-28，main 尚未发布）
+## 四项体验调整专项（2026-09-27 至 2026-09-28，后随 v0.7.2 发布）
 
 - 构建Debug/AndroidTest、69项JVM（失败/错误/跳过均0）通过；最终Lint0错误35警告，包含原有提示与本次KTX/测试建议，未扩大依赖维护范围。证据work/ux-improvements/verified-build.log、final-build2.log、real-picker-build.log及本地JVM报告。
 - 原生编辑器7项：旧纯文/图文无损往返、光标插图后续写、跨图选区替换、图片边界退格、中文组合输入及emoji、字数限制与选区、超长替换拒绝后保留图文；editor-boundaries-final.log全部通过。
